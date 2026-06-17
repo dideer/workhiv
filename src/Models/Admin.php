@@ -48,29 +48,15 @@ class Admin
     public function pendingEmployers(): array
     {
         $stmt = $this->db->prepare(
-            'SELECT u.user_id, u.full_name, u.email, u.created_at, c.company_name, c.sector
-             FROM users u
-             LEFT JOIN companies c ON c.user_id = u.user_id
-             WHERE u.role = :role AND u.status = :status
-             ORDER BY u.user_id DESC'
+            'SELECT u.user_id, u.full_name, u.email, u.created_at,
+                    c.company_id, c.company_name, c.sector, c.address, c.website, c.description
+             FROM companies c
+             INNER JOIN users u ON u.user_id = c.user_id
+             WHERE u.role = :role
+               AND c.approved_by IS NULL
+             ORDER BY c.company_id DESC'
         );
         $stmt->bindValue(':role', 'employer', PDO::PARAM_STR);
-        $stmt->bindValue(':status', 'pending', PDO::PARAM_STR);
-        $stmt->execute();
-
-        return $stmt->fetchAll();
-    }
-
-    public function pendingVacancies(): array
-    {
-        $stmt = $this->db->prepare(
-            'SELECT v.vacancy_id, v.title, v.created_at, c.company_name
-             FROM vacancies v
-             LEFT JOIN companies c ON c.company_id = v.company_id
-             WHERE v.status = :status
-             ORDER BY v.vacancy_id DESC'
-        );
-        $stmt->bindValue(':status', 'pending', PDO::PARAM_STR);
         $stmt->execute();
 
         return $stmt->fetchAll();

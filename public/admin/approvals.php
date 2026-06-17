@@ -1,6 +1,7 @@
 <?php
 require_once __DIR__ . '/../../src/Helpers/Session.php';
 require_once __DIR__ . '/../../src/Models/Admin.php';
+require_once __DIR__ . '/../../src/Controllers/CompanyController.php';
 
 Session::start();
 
@@ -36,9 +37,24 @@ function rowValue(array $row, array $keys, string $fallback = 'Not provided'): s
 }
 
 $adminName = (string) ($_SESSION['full_name'] ?? 'Admin User');
+$message = '';
+$error = '';
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'approve_company') {
+    $controller = new CompanyController();
+    $result = $controller->approveCompany((int) ($_POST['company_id'] ?? 0), (int) ($_SESSION['user_id'] ?? 0));
+
+    if ($result['success']) {
+        header('Location: approvals.php?message=' . urlencode($result['message']));
+        exit;
+    }
+
+    $error = $result['message'];
+}
+
+$message = (string) ($_GET['message'] ?? $message);
 $adminModel = new Admin();
 $pendingEmployers = $adminModel->pendingEmployers();
-$pendingVacancies = $adminModel->pendingVacancies();
 $pendingExchanges = $adminModel->pendingExchangeRequests();
 ?>
 <!doctype html>
@@ -84,13 +100,19 @@ $pendingExchanges = $adminModel->pendingExchangeRequests();
     <main class="admin-main">
         <header class="admin-page-header">
             <h1>Approvals</h1>
-            <p>Review and approve pending registrations and job postings.</p>
+            <p>Review and approve pending employer registrations and exchange requests.</p>
         </header>
+
+        <?php if ($message !== ''): ?>
+            <div class="form-alert"><?php echo e($message); ?></div>
+        <?php endif; ?>
+        <?php if ($error !== ''): ?>
+            <div class="form-alert" role="alert"><?php echo e($error); ?></div>
+        <?php endif; ?>
 
         <section class="admin-panel approvals-panel" aria-label="Pending approvals">
             <div class="tab-list" role="tablist" aria-label="Approval categories">
                 <button class="tab-button is-active" type="button" role="tab" aria-selected="true" data-tab="employers">Employer registrations</button>
-                <button class="tab-button" type="button" role="tab" aria-selected="false" data-tab="jobs">Job postings</button>
                 <button class="tab-button" type="button" role="tab" aria-selected="false" data-tab="exchanges">Exchange requests</button>
             </div>
 
@@ -105,32 +127,14 @@ $pendingExchanges = $adminModel->pendingExchangeRequests();
                         <article class="approval-item">
                             <div class="approval-primary">
                                 <p><?php echo e(rowValue($employer, ['company_name', 'full_name'])); ?></p>
-                                <span class="approval-meta"><?php echo e(rowValue($employer, ['sector'])); ?> · <?php echo e(submittedDate($employer)); ?></span>
+                                <span class="approval-meta"><?php echo e(rowValue($employer, ['sector'])); ?> - <?php echo e(submittedDate($employer)); ?></span>
                             </div>
                             <div class="approval-actions">
-                                <button class="button-primary" type="button" data-action="approved">Approve</button>
-                                <button class="button-outline reject" type="button" data-action="rejected">Reject</button>
-                            </div>
-                        </article>
-                    <?php endforeach; ?>
-                <?php endif; ?>
-            </div>
-
-            <div class="approval-list tab-panel" data-panel="jobs" hidden>
-                <?php if ($pendingVacancies === []): ?>
-                    <div class="empty-state">
-                        <h3>No pending job postings</h3>
-                        <p>Job postings awaiting review will appear here.</p>
-                    </div>
-                <?php else: ?>
-                    <?php foreach ($pendingVacancies as $vacancy): ?>
-                        <article class="approval-item">
-                            <div class="approval-primary">
-                                <p><?php echo e(rowValue($vacancy, ['title', 'job_title'])); ?></p>
-                                <span class="approval-meta"><?php echo e(rowValue($vacancy, ['company_name'])); ?> · <?php echo e(submittedDate($vacancy)); ?></span>
-                            </div>
-                            <div class="approval-actions">
-                                <button class="button-primary" type="button" data-action="approved">Approve</button>
+                                <form method="post">
+                                    <input type="hidden" name="action" value="approve_company">
+                                    <input type="hidden" name="company_id" value="<?php echo e((string) $employer['company_id']); ?>">
+                                    <button class="button-primary" type="submit">Approve</button>
+                                </form>
                                 <button class="button-outline reject" type="button" data-action="rejected">Reject</button>
                             </div>
                         </article>
@@ -149,7 +153,7 @@ $pendingExchanges = $adminModel->pendingExchangeRequests();
                         <article class="approval-item">
                             <div class="approval-primary">
                                 <p><?php echo e(rowValue($exchange, ['source_company', 'from_company', 'company_a'], 'Company A')); ?> to <?php echo e(rowValue($exchange, ['target_company', 'to_company', 'company_b'], 'Company B')); ?></p>
-                                <span class="approval-meta">Employee: <?php echo e(rowValue($exchange, ['employee_name', 'employee_full_name'], 'Not provided')); ?> · <?php echo e(submittedDate($exchange)); ?></span>
+                                <span class="approval-meta">Employee: <?php echo e(rowValue($exchange, ['employee_name', 'employee_full_name'], 'Not provided')); ?> - <?php echo e(submittedDate($exchange)); ?></span>
                                 <span class="type-badge"><?php echo e(rowValue($exchange, ['exchange_type', 'type'], 'Exchange')); ?></span>
                             </div>
                             <div class="approval-actions">

@@ -191,9 +191,14 @@ class AuthController
                 return 'complete-company.php';
             }
 
-            return 'employer-dashboard.php';
+            $company = $this->companies->findByUserId($userId);
+            if (!$company || !$this->companies->isApproved((int) $company['company_id'])) {
+                return 'employer/company-pending.php';
+            }
+
+            return 'employer/dashboard.php';
         }
 
-        return 'index.html';
+        return 'index.php';
     }
 }

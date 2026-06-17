@@ -145,7 +145,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <body>
     <header class="site-header">
         <nav class="site-nav" aria-label="Profile navigation">
-            <a class="site-logo" href="index.html" aria-label="WorkHive home">WorkHive</a>
+            <a class="site-logo" href="index.php" aria-label="WorkHive home">WorkHive</a>
             <div class="nav-actions">
                 <a class="nav-button nav-button-secondary" href="logout.php">Log out</a>
             </div>

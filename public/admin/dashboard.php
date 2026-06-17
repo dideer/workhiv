@@ -16,11 +16,10 @@ function e(string $value): string
 
 $adminName = (string) ($_SESSION['full_name'] ?? 'Admin User');
 $adminModel = new Admin();
-$pendingEmployers = $adminModel->countUsersByRoleAndStatus('employer', 'pending');
-$pendingVacancies = $adminModel->countVacanciesByStatus('pending');
+$pendingEmployers = count($adminModel->pendingEmployers());
 $pendingExchanges = $adminModel->countExchangeRequestsByStatus('pending');
 $stats = [
-    'pendingApprovals' => $pendingEmployers + $pendingVacancies + $pendingExchanges,
+    'pendingApprovals' => $pendingEmployers + $pendingExchanges,
     'activeJobSeekers' => $adminModel->countUsersByRoleAndStatus('job_seeker', 'active'),
     'activeEmployers' => $adminModel->countUsersByRoleAndStatus('employer', 'active'),
     'openExchangeRequests' => $pendingExchanges,
@@ -67,9 +66,12 @@ $stats = [
     </aside>
 
     <main class="admin-main">
-        <header class="admin-page-header">
-            <h1>Dashboard</h1>
-            <p>An overview of activity across WorkHive.</p>
+        <header class="admin-page-header panel-header">
+            <div>
+                <h1>Dashboard</h1>
+                <p>An overview of activity across WorkHive.</p>
+            </div>
+            <a class="button-primary" href="approvals.php">Review company approvals</a>
         </header>
 
         <section class="admin-stats" aria-label="Platform statistics">

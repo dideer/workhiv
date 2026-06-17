@@ -51,4 +51,15 @@ class User
 
         return (bool) $stmt->fetchColumn();
     }
+
+    public function updateRole(int $userId, string $role): bool
+    {
+        $stmt = $this->db->prepare(
+            'UPDATE users SET role = :role WHERE user_id = :user_id'
+        );
+        $stmt->bindValue(':role', $role, PDO::PARAM_STR);
+        $stmt->bindValue(':user_id', $userId, PDO::PARAM_INT);
+
+        return $stmt->execute();
+    }
 }

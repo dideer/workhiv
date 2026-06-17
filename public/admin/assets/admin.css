@@ -226,6 +226,7 @@
 }
 
 .status-tag.pending,
+.status-tag.applied,
 .type-badge {
     border: 1px solid rgba(185, 138, 46, 0.34);
     background: rgba(185, 138, 46, 0.11);
@@ -233,10 +234,20 @@
 }
 
 .status-tag.approved,
-.status-tag.completed {
+.status-tag.completed,
+.status-tag.active,
+.status-tag.shortlisted,
+.status-tag.hired {
     border: 1px solid rgba(43, 74, 62, 0.28);
     background: rgba(43, 74, 62, 0.1);
     color: var(--forest);
+}
+
+.status-tag.closed,
+.status-tag.rejected {
+    border: 1px solid var(--line);
+    background: var(--paper-deep);
+    color: var(--muted);
 }
 
 .tab-list {

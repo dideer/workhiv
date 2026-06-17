@@ -163,6 +163,27 @@ h3 {
     background: var(--forest);
 }
 
+.button-outline {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 42px;
+    padding: 10px 18px;
+    border: 1px solid var(--line);
+    border-radius: 5px;
+    background: var(--white);
+    color: var(--ink);
+    font-weight: 700;
+    text-decoration: none;
+    cursor: pointer;
+    transition: background-color 180ms ease, border-color 180ms ease, color 180ms ease;
+}
+
+.button-outline:hover {
+    border-color: var(--forest);
+    color: var(--forest);
+}
+
 .nav-button-secondary {
     background: transparent;
     color: var(--ink);
@@ -575,7 +596,7 @@ h3 {
 }
 
 .auth-photo-register {
-    background-image: url("../images/register-side.png");
+    background-image: url("../images/register-side.jpg");
 }
 
 .auth-card {
@@ -757,6 +778,128 @@ h3 {
     font-size: 1rem;
 }
 
+.panel-header {
+    display: flex;
+    align-items: end;
+    justify-content: space-between;
+    gap: 20px;
+}
+
+.vacancy-form {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.approval-actions form {
+    margin: 0;
+}
+
+.seeker-page {
+    display: grid;
+    gap: 24px;
+}
+
+.seeker-page .section-heading > p:not(.section-kicker),
+.seeker-card > p {
+    color: var(--muted);
+}
+
+.seeker-nav-actions span {
+    color: var(--muted);
+    font-weight: 600;
+}
+
+.admin-stats {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 18px;
+}
+
+.seeker-stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.admin-stat-card {
+    display: grid;
+    gap: 8px;
+    padding: 26px;
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    background: var(--white);
+}
+
+.admin-stat-card strong {
+    font-family: "Fraunces", Georgia, serif;
+    font-size: 2.25rem;
+    font-weight: 600;
+    letter-spacing: -0.02em;
+    line-height: 1;
+}
+
+.admin-stat-card span {
+    color: var(--muted);
+    font-weight: 600;
+}
+
+.application-list {
+    display: grid;
+    gap: 16px;
+}
+
+.application-card {
+    display: grid;
+    gap: 18px;
+    padding: 26px;
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    background: var(--white);
+}
+
+.application-card h2 {
+    font-size: 1.35rem;
+}
+
+.status-tag {
+    display: inline-flex;
+    align-items: center;
+    min-height: 28px;
+    width: max-content;
+    padding: 5px 9px;
+    border-radius: 5px;
+    font-size: 0.82rem;
+    font-weight: 700;
+}
+
+.status-tag.pending,
+.status-tag.applied {
+    border: 1px solid rgba(185, 138, 46, 0.34);
+    background: rgba(185, 138, 46, 0.11);
+    color: var(--ink);
+}
+
+.status-tag.approved,
+.status-tag.completed,
+.status-tag.active,
+.status-tag.shortlisted,
+.status-tag.hired {
+    border: 1px solid rgba(43, 74, 62, 0.28);
+    background: rgba(43, 74, 62, 0.1);
+    color: var(--forest);
+}
+
+.status-tag.closed,
+.status-tag.rejected {
+    border: 1px solid var(--line);
+    background: var(--paper-deep);
+    color: var(--muted);
+}
+
+.feedback-note {
+    padding: 12px 14px;
+    border-left: 3px solid var(--gold);
+    background: var(--paper-deep);
+    color: var(--muted);
+}
+
 .role-picker {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -803,6 +946,7 @@ h3 {
 .nav-button:focus-visible,
 .nav-link:focus-visible,
 .button-primary:focus-visible,
+.button-outline:focus-visible,
 .pagination-button:focus-visible,
 .modal-close:focus-visible,
 .role-option:focus-within,
@@ -863,7 +1007,9 @@ h3 {
     .modal-summary,
     .requirements-list,
     .form-grid,
-    .company-summary {
+    .company-summary,
+    .admin-stats,
+    .seeker-stats {
         grid-template-columns: 1fr;
     }
 

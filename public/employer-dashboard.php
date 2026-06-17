@@ -15,6 +15,14 @@ if (!$companyModel->hasCompletedDetails((int) $_SESSION['user_id'])) {
     exit;
 }
 
+if (!$companyModel->isApproved((int) $companyModel->findByUserId((int) $_SESSION['user_id'])['company_id'])) {
+    header('Location: employer/company-pending.php');
+    exit;
+}
+
+header('Location: employer/dashboard.php');
+exit;
+
 function e(string $value): string
 {
     return htmlspecialchars($value, ENT_QUOTES, 'UTF-8');

@@ -52,7 +52,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <body>
     <header class="site-header">
         <nav class="site-nav" aria-label="Authentication navigation">
-            <a class="site-logo" href="index.html" aria-label="WorkHive home">WorkHive</a>
+            <a class="site-logo" href="index.php" aria-label="WorkHive home">WorkHive</a>
         </nav>
     </header>
 
