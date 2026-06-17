@@ -1,0 +1,248 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>WorkHive</title>
+    <link rel="stylesheet" href="assets/css/style.css">
+</head>
+<body>
+    <header class="site-header">
+        <nav class="site-nav" aria-label="Primary navigation">
+            <a class="site-logo" href="index.html" aria-label="WorkHive home">WorkHive</a>
+            <div class="nav-actions">
+                <a class="nav-button nav-button-secondary" href="login.html">Login</a>
+                <a class="nav-button nav-button-primary" href="register.html">Register</a>
+            </div>
+        </nav>
+    </header>
+
+    <main>
+        <section class="hero-section" aria-labelledby="hero-title">
+            <div class="hero-content">
+                <h1 id="hero-title">Find trusted employment opportunities across Rwanda</h1>
+                <p>Search verified roles from employers and institutions through WorkHive.</p>
+            </div>
+        </section>
+
+        <section class="job-search-section" aria-labelledby="search-title">
+            <h2 id="search-title">Search jobs</h2>
+            <form class="job-search-form" action="#" method="get">
+                <div class="search-field">
+                    <label for="job-search">Search by title or location</label>
+                    <input type="search" id="job-search" name="search" placeholder="Job title or location">
+                </div>
+
+                <div class="search-field">
+                    <label for="sector-filter">Sector</label>
+                    <select id="sector-filter" name="sector">
+                        <option value="">All sectors</option>
+                        <option value="agriculture">Agriculture</option>
+                        <option value="education">Education</option>
+                        <option value="finance">Finance</option>
+                        <option value="healthcare">Healthcare</option>
+                        <option value="ict">ICT</option>
+                        <option value="public-service">Public Service</option>
+                    </select>
+                </div>
+
+                <div class="search-field">
+                    <label for="education-filter">Education level</label>
+                    <select id="education-filter" name="education">
+                        <option value="">All education levels</option>
+                        <option value="secondary">Secondary education</option>
+                        <option value="diploma">Diploma</option>
+                        <option value="bachelors">Bachelor's degree</option>
+                        <option value="masters">Master's degree</option>
+                    </select>
+                </div>
+            </form>
+        </section>
+
+        <section class="job-listings-section" aria-labelledby="job-listings-title">
+            <h2 id="job-listings-title">Latest opportunities</h2>
+            <div class="job-listings">
+                <article class="job-card" data-id="job-001">
+                    <a class="job-card-link" href="#job-001" aria-label="View details for Monitoring and Evaluation Officer">
+                        <header class="job-card-header">
+                            <h3>Monitoring and Evaluation Officer</h3>
+                            <p class="job-company">Rwanda Skills Development Board</p>
+                        </header>
+                        <dl class="job-meta">
+                            <div>
+                                <dt>Location</dt>
+                                <dd>Kigali</dd>
+                            </div>
+                            <div>
+                                <dt>Salary range</dt>
+                                <dd>RWF 850,000 - 1,200,000</dd>
+                            </div>
+                            <div>
+                                <dt>Posted</dt>
+                                <dd>2026-06-15</dd>
+                            </div>
+                            <div>
+                                <dt>Deadline</dt>
+                                <dd>2026-07-05</dd>
+                            </div>
+                        </dl>
+                        <p class="job-excerpt">Support results tracking, reporting, and field data quality for workforce development programs.</p>
+                    </a>
+                </article>
+
+                <article class="job-card" data-id="job-002">
+                    <a class="job-card-link" href="#job-002" aria-label="View details for Software Support Analyst">
+                        <header class="job-card-header">
+                            <h3>Software Support Analyst</h3>
+                            <p class="job-company">Kigali Digital Services Ltd</p>
+                        </header>
+                        <dl class="job-meta">
+                            <div>
+                                <dt>Location</dt>
+                                <dd>Kigali</dd>
+                            </div>
+                            <div>
+                                <dt>Salary range</dt>
+                                <dd>RWF 700,000 - 950,000</dd>
+                            </div>
+                            <div>
+                                <dt>Posted</dt>
+                                <dd>2026-06-14</dd>
+                            </div>
+                            <div>
+                                <dt>Deadline</dt>
+                                <dd>2026-06-30</dd>
+                            </div>
+                        </dl>
+                        <p class="job-excerpt">Provide user support, troubleshoot application issues, and document service requests for enterprise clients.</p>
+                    </a>
+                </article>
+
+                <article class="job-card" data-id="job-003">
+                    <a class="job-card-link" href="#job-003" aria-label="View details for Agricultural Extension Coordinator">
+                        <header class="job-card-header">
+                            <h3>Agricultural Extension Coordinator</h3>
+                            <p class="job-company">Green Hills Cooperative Union</p>
+                        </header>
+                        <dl class="job-meta">
+                            <div>
+                                <dt>Location</dt>
+                                <dd>Musanze</dd>
+                            </div>
+                            <div>
+                                <dt>Salary range</dt>
+                                <dd>RWF 600,000 - 820,000</dd>
+                            </div>
+                            <div>
+                                <dt>Posted</dt>
+                                <dd>2026-06-12</dd>
+                            </div>
+                            <div>
+                                <dt>Deadline</dt>
+                                <dd>2026-07-01</dd>
+                            </div>
+                        </dl>
+                        <p class="job-excerpt">Coordinate farmer training, crop advisory visits, and cooperative reporting across northern districts.</p>
+                    </a>
+                </article>
+
+                <article class="job-card" data-id="job-004">
+                    <a class="job-card-link" href="#job-004" aria-label="View details for Secondary Mathematics Teacher">
+                        <header class="job-card-header">
+                            <h3>Secondary Mathematics Teacher</h3>
+                            <p class="job-company">Huye Excellence School</p>
+                        </header>
+                        <dl class="job-meta">
+                            <div>
+                                <dt>Location</dt>
+                                <dd>Huye</dd>
+                            </div>
+                            <div>
+                                <dt>Salary range</dt>
+                                <dd>RWF 480,000 - 650,000</dd>
+                            </div>
+                            <div>
+                                <dt>Posted</dt>
+                                <dd>2026-06-10</dd>
+                            </div>
+                            <div>
+                                <dt>Deadline</dt>
+                                <dd>2026-06-28</dd>
+                            </div>
+                        </dl>
+                        <p class="job-excerpt">Teach lower and upper secondary mathematics while supporting assessment and learner mentorship.</p>
+                    </a>
+                </article>
+
+                <article class="job-card" data-id="job-005">
+                    <a class="job-card-link" href="#job-005" aria-label="View details for Branch Accountant">
+                        <header class="job-card-header">
+                            <h3>Branch Accountant</h3>
+                            <p class="job-company">Umurava Microfinance Plc</p>
+                        </header>
+                        <dl class="job-meta">
+                            <div>
+                                <dt>Location</dt>
+                                <dd>Rubavu</dd>
+                            </div>
+                            <div>
+                                <dt>Salary range</dt>
+                                <dd>RWF 750,000 - 1,000,000</dd>
+                            </div>
+                            <div>
+                                <dt>Posted</dt>
+                                <dd>2026-06-09</dd>
+                            </div>
+                            <div>
+                                <dt>Deadline</dt>
+                                <dd>2026-06-27</dd>
+                            </div>
+                        </dl>
+                        <p class="job-excerpt">Manage branch accounts, reconciliations, statutory reporting, and internal financial controls.</p>
+                    </a>
+                </article>
+
+                <article class="job-card" data-id="job-006">
+                    <a class="job-card-link" href="#job-006" aria-label="View details for Community Health Program Assistant">
+                        <header class="job-card-header">
+                            <h3>Community Health Program Assistant</h3>
+                            <p class="job-company">Rwanda Community Health Network</p>
+                        </header>
+                        <dl class="job-meta">
+                            <div>
+                                <dt>Location</dt>
+                                <dd>Muhanga</dd>
+                            </div>
+                            <div>
+                                <dt>Salary range</dt>
+                                <dd>RWF 520,000 - 720,000</dd>
+                            </div>
+                            <div>
+                                <dt>Posted</dt>
+                                <dd>2026-06-08</dd>
+                            </div>
+                            <div>
+                                <dt>Deadline</dt>
+                                <dd>2026-06-25</dd>
+                            </div>
+                        </dl>
+                        <p class="job-excerpt">Assist district health outreach activities, beneficiary follow-up, and monthly program documentation.</p>
+                    </a>
+                </article>
+            </div>
+
+            <nav class="pagination" aria-label="Job listings pagination">
+                <button class="pagination-button" type="button" disabled>Previous</button>
+                <button class="pagination-button is-current" type="button" aria-current="page">1</button>
+                <button class="pagination-button" type="button">2</button>
+                <button class="pagination-button" type="button">Next</button>
+            </nav>
+        </section>
+    </main>
+
+    <footer class="site-footer">
+        <p>WorkHive</p>
+        <p>In partnership with MIFOTRA</p>
+    </footer>
+</body>
+</html>
