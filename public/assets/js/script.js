@@ -474,7 +474,7 @@ document.addEventListener("keydown", (event) => {
 
 applyButton?.addEventListener("click", () => {
     applyMessage.hidden = false;
-    applyMessage.innerHTML = 'Please log in to apply for this job. <a href="login.html">Login</a>';
+    applyMessage.innerHTML = 'Please log in to apply for this job. <a href="login.php">Login</a>';
 });
 
 populateFilters();
