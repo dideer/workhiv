@@ -70,6 +70,7 @@ function uploadIndexed(string $field, int $index, array $allowedExtensions): arr
 
 $error = '';
 $gender = $_POST['gender'] ?? '';
+$fieldOptions = ['Computer Science', 'Business', 'Engineering', 'Health Sciences', 'Education', 'Agriculture', 'Law', 'Arts & Social Sciences', 'Other'];
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $required = ['date_of_birth', 'gender', 'address'];
@@ -81,9 +82,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     $photoUpload = ['path' => null, 'error' => null];
+    $cvUpload = ['path' => null, 'error' => null];
     if ($error === '') {
         $photoUpload = uploadFile($_FILES['profile_photo'] ?? [], ['jpg', 'jpeg', 'png']);
         $error = $photoUpload['error'] ?? '';
+    }
+    if ($error === '') {
+        $cvUpload = uploadFile($_FILES['cv_file'] ?? [], ['pdf']);
+        $error = $cvUpload['error'] ?? '';
     }
 
     $education = $_POST['education'] ?? [];
@@ -120,6 +126,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'gender' => trim((string) $_POST['gender']),
             'address' => trim((string) $_POST['address']),
             'profile_photo' => $photoUpload['path'],
+            'cv_file' => $cvUpload['path'],
             'education' => $education,
             'experience' => $experience,
             'skills' => $skills,
@@ -187,6 +194,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             <label for="profile-photo">Profile photo</label>
                             <input type="file" id="profile-photo" name="profile_photo" accept=".jpg,.jpeg,.png">
                         </div>
+                        <div class="form-field full-span">
+                            <label for="cv-file">CV file</label>
+                            <input type="file" id="cv-file" name="cv_file" accept=".pdf">
+                        </div>
                     </div>
                 </section>
 
@@ -209,7 +220,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                 </div>
                                 <div class="form-field">
                                     <label>Field of study</label>
-                                    <input type="text" name="education[0][field_of_study]">
+                                    <select name="education[0][field_of_study]" data-field-of-study>
+                                        <option value="">Select field</option>
+                                        <?php foreach ($fieldOptions as $field): ?>
+                                            <option value="<?php echo e($field); ?>"><?php echo e($field); ?></option>
+                                        <?php endforeach; ?>
+                                    </select>
+                                </div>
+                                <div class="form-field" data-field-other-wrap hidden>
+                                    <label>Please specify</label>
+                                    <input type="text" name="education[0][field_of_study_other]">
                                 </div>
                                 <div class="form-field">
                                     <label>Institution</label>
@@ -308,6 +328,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 if (field.type === "checkbox") field.checked = false;
                 if (field.matches("[data-end-date]")) field.disabled = false;
             });
+            block.querySelectorAll("[data-field-other-wrap]").forEach((wrap) => {
+                wrap.hidden = true;
+            });
         }
 
         document.querySelectorAll("[data-add-block]").forEach((button) => {
@@ -321,11 +344,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         });
 
         document.addEventListener("change", (event) => {
-            if (!event.target.matches("[data-current-role]")) return;
-            const block = event.target.closest(".repeat-block");
-            const endDate = block.querySelector("[data-end-date]");
-            endDate.disabled = event.target.checked;
-            if (event.target.checked) endDate.value = "";
+            if (event.target.matches("[data-current-role]")) {
+                const block = event.target.closest(".repeat-block");
+                const endDate = block.querySelector("[data-end-date]");
+                endDate.disabled = event.target.checked;
+                if (event.target.checked) endDate.value = "";
+            }
+
+            if (event.target.matches("[data-field-of-study]")) {
+                const block = event.target.closest(".repeat-block");
+                const wrap = block.querySelector("[data-field-other-wrap]");
+                if (!wrap) return;
+                wrap.hidden = event.target.value !== "Other";
+                if (wrap.hidden) wrap.querySelector("input").value = "";
+            }
         });
     </script>
 </body>

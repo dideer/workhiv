@@ -2,16 +2,19 @@
 
 require_once __DIR__ . '/../Models/Application.php';
 require_once __DIR__ . '/../Models/Vacancy.php';
+require_once __DIR__ . '/../Models/VacancyRequirement.php';
 
 class ApplicationSeekerController
 {
     private Application $applications;
     private Vacancy $vacancies;
+    private VacancyRequirement $requirements;
 
     public function __construct()
     {
         $this->applications = new Application();
         $this->vacancies = new Vacancy();
+        $this->requirements = new VacancyRequirement();
     }
 
     public function apply(int $userId, int $vacancyId, string $coverLetter): array
@@ -31,6 +34,13 @@ class ApplicationSeekerController
 
         if (trim($coverLetter) === '') {
             return ['success' => false, 'message' => 'Please enter a cover letter.'];
+        }
+
+        if (!$this->requirements->matchesRequirement($userId, $vacancyId)) {
+            return [
+                'success' => false,
+                'message' => 'Your education does not match this role requirement: ' . $this->requirements->requirementText($vacancyId) . '.',
+            ];
         }
 
         $this->applications->create([

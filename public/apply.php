@@ -2,6 +2,7 @@
 require_once __DIR__ . '/../src/Helpers/Session.php';
 require_once __DIR__ . '/../src/Models/Vacancy.php';
 require_once __DIR__ . '/../src/Models/Application.php';
+require_once __DIR__ . '/../src/Models/VacancyRequirement.php';
 require_once __DIR__ . '/../src/Controllers/ApplicationSeekerController.php';
 
 Session::start();
@@ -19,9 +20,11 @@ function e(string $value): string
 $vacancyId = (int) ($_GET['vacancy_id'] ?? $_POST['vacancy_id'] ?? 0);
 $vacancyModel = new Vacancy();
 $applicationModel = new Application();
+$requirementModel = new VacancyRequirement();
 $controller = new ApplicationSeekerController();
 $vacancy = $vacancyModel->getById($vacancyId);
 $error = '';
+$requirementWarning = '';
 $alreadyApplied = $vacancyId > 0 && $applicationModel->hasApplied((int) $_SESSION['user_id'], $vacancyId);
 $coverLetter = (string) ($_POST['cover_letter'] ?? '');
 
@@ -29,7 +32,11 @@ if (!$vacancy || $vacancy['status'] !== 'active' || strtotime((string) $vacancy[
     $error = 'This vacancy is not available for applications.';
 }
 
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && $error === '' && !$alreadyApplied) {
+if ($error === '' && !$requirementModel->matchesRequirement((int) $_SESSION['user_id'], $vacancyId)) {
+    $requirementWarning = 'You do not meet the education requirement for this role. Required: ' . $requirementModel->requirementText($vacancyId) . '.';
+}
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && $error === '' && $requirementWarning === '' && !$alreadyApplied) {
     $result = $controller->apply((int) $_SESSION['user_id'], $vacancyId, $coverLetter);
 
     if ($result['success']) {
@@ -73,6 +80,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $error === '' && !$alreadyApplied) 
             <?php if ($error !== ''): ?>
                 <div class="form-alert" role="alert"><?php echo e($error); ?></div>
             <?php endif; ?>
+            <?php if ($requirementWarning !== ''): ?>
+                <div class="form-alert" role="alert"><?php echo e($requirementWarning); ?></div>
+            <?php endif; ?>
 
             <?php if ($alreadyApplied): ?>
                 <div class="empty-state">
@@ -80,7 +90,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $error === '' && !$alreadyApplied) 
                     <p>You can track this application from your applications page.</p>
                     <a class="button-primary" href="my-applications.php">View my applications</a>
                 </div>
-            <?php elseif ($error === '' && $vacancy): ?>
+            <?php elseif ($error === '' && $requirementWarning === '' && $vacancy): ?>
                 <form class="profile-form" method="post">
                     <input type="hidden" name="vacancy_id" value="<?php echo e((string) $vacancyId); ?>">
                     <div class="form-field">

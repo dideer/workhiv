@@ -30,16 +30,18 @@ class ProfileController
     {
         try {
             $this->db->beginTransaction();
+            $existingProfile = $this->profiles->findByUserId($userId);
 
             $profileData = [
                 'user_id' => $userId,
                 'date_of_birth' => trim((string) ($data['date_of_birth'] ?? '')),
                 'gender' => trim((string) ($data['gender'] ?? '')),
                 'address' => trim((string) ($data['address'] ?? '')),
-                'profile_photo' => $data['profile_photo'] ?? null,
+                'profile_photo' => $data['profile_photo'] ?? ($existingProfile['profile_photo'] ?? null),
+                'cv_file' => $data['cv_file'] ?? ($existingProfile['cv_file'] ?? null),
             ];
 
-            if ($this->profiles->findByUserId($userId)) {
+            if ($existingProfile) {
                 $this->profiles->update($userId, $profileData);
             } else {
                 $this->profiles->create($profileData);
@@ -50,10 +52,14 @@ class ProfileController
                     continue;
                 }
 
+                $fieldOfStudy = trim((string) ($entry['field_of_study'] ?? ''));
+                $fieldOther = $fieldOfStudy === 'Other' ? trim((string) ($entry['field_of_study_other'] ?? '')) : null;
+
                 $this->education->create([
                     'user_id' => $userId,
                     'education_level' => trim((string) ($entry['education_level'] ?? '')),
-                    'field_of_study' => trim((string) ($entry['field_of_study'] ?? '')),
+                    'field_of_study' => $fieldOfStudy,
+                    'field_of_study_other' => $fieldOther,
                     'institution' => trim((string) ($entry['institution'] ?? '')),
                     'year_completed' => (int) ($entry['year_completed'] ?? 0),
                     'proof_file' => $entry['proof_file'] ?? null,

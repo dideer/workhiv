@@ -1,0 +1,1 @@
+ALTER TABLE profiles ADD COLUMN cv_file VARCHAR(255) DEFAULT NULL AFTER profile_photo;

@@ -14,14 +14,15 @@ class Profile
     public function create(array $data): int
     {
         $stmt = $this->db->prepare(
-            'INSERT INTO profiles (user_id, date_of_birth, gender, address, profile_photo)
-             VALUES (:user_id, :date_of_birth, :gender, :address, :profile_photo)'
+            'INSERT INTO profiles (user_id, date_of_birth, gender, address, profile_photo, cv_file)
+             VALUES (:user_id, :date_of_birth, :gender, :address, :profile_photo, :cv_file)'
         );
         $stmt->bindValue(':user_id', $data['user_id'], PDO::PARAM_INT);
         $stmt->bindValue(':date_of_birth', $data['date_of_birth'], PDO::PARAM_STR);
         $stmt->bindValue(':gender', $data['gender'], PDO::PARAM_STR);
         $stmt->bindValue(':address', $data['address'], PDO::PARAM_STR);
         $stmt->bindValue(':profile_photo', $data['profile_photo'] ?? null, empty($data['profile_photo']) ? PDO::PARAM_NULL : PDO::PARAM_STR);
+        $stmt->bindValue(':cv_file', $data['cv_file'] ?? null, empty($data['cv_file']) ? PDO::PARAM_NULL : PDO::PARAM_STR);
         $stmt->execute();
 
         return (int) $this->db->lastInsertId();
@@ -46,7 +47,8 @@ class Profile
              SET date_of_birth = :date_of_birth,
                  gender = :gender,
                  address = :address,
-                 profile_photo = :profile_photo
+                 profile_photo = :profile_photo,
+                 cv_file = :cv_file
              WHERE user_id = :user_id'
         );
         $stmt->bindValue(':user_id', $userId, PDO::PARAM_INT);
@@ -54,6 +56,18 @@ class Profile
         $stmt->bindValue(':gender', $data['gender'], PDO::PARAM_STR);
         $stmt->bindValue(':address', $data['address'], PDO::PARAM_STR);
         $stmt->bindValue(':profile_photo', $data['profile_photo'] ?? null, empty($data['profile_photo']) ? PDO::PARAM_NULL : PDO::PARAM_STR);
+        $stmt->bindValue(':cv_file', $data['cv_file'] ?? null, empty($data['cv_file']) ? PDO::PARAM_NULL : PDO::PARAM_STR);
+
+        return $stmt->execute();
+    }
+
+    public function updateCv(int $userId, string $cvFilePath): bool
+    {
+        $stmt = $this->db->prepare(
+            'UPDATE profiles SET cv_file = :cv_file WHERE user_id = :user_id'
+        );
+        $stmt->bindValue(':user_id', $userId, PDO::PARAM_INT);
+        $stmt->bindValue(':cv_file', $cvFilePath, PDO::PARAM_STR);
 
         return $stmt->execute();
     }

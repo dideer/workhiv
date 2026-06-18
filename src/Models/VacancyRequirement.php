@@ -66,4 +66,50 @@ class VacancyRequirement
         $requirement = $stmt->fetch();
         return $requirement ?: null;
     }
+
+    public function matchesRequirement(int $userId, int $vacancyId): bool
+    {
+        $requirement = $this->getByVacancyId($vacancyId);
+        if (!$requirement || empty($requirement['education_level'])) {
+            return true;
+        }
+
+        $fieldOfStudy = trim((string) ($requirement['field_of_study'] ?? ''));
+        $sql = 'SELECT 1
+                FROM education
+                WHERE user_id = :user_id
+                  AND education_level = :education_level';
+
+        $checkField = $fieldOfStudy !== '' && $fieldOfStudy !== 'Other';
+        if ($checkField) {
+            $sql .= ' AND field_of_study = :field_of_study';
+        }
+
+        $sql .= ' LIMIT 1';
+
+        $stmt = $this->db->prepare($sql);
+        $stmt->bindValue(':user_id', $userId, PDO::PARAM_INT);
+        $stmt->bindValue(':education_level', $requirement['education_level'], PDO::PARAM_STR);
+        if ($checkField) {
+            $stmt->bindValue(':field_of_study', $fieldOfStudy, PDO::PARAM_STR);
+        }
+        $stmt->execute();
+
+        return (bool) $stmt->fetchColumn();
+    }
+
+    public function requirementText(int $vacancyId): string
+    {
+        $requirement = $this->getByVacancyId($vacancyId);
+        if (!$requirement || empty($requirement['education_level'])) {
+            return 'No specific education requirement';
+        }
+
+        $text = (string) $requirement['education_level'];
+        if (!empty($requirement['field_of_study'])) {
+            $text .= ' in ' . (string) $requirement['field_of_study'];
+        }
+
+        return $text;
+    }
 }
