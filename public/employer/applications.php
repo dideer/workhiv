@@ -6,30 +6,12 @@ require_once __DIR__ . '/../../src/Models/Vacancy.php';
 $activePage = 'applications';
 $controller = new ApplicationController();
 $vacancyModel = new Vacancy();
-$message = '';
-$error = '';
-
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $result = $controller->updateStatus(
-        (int) ($_POST['app_id'] ?? 0),
-        $companyId,
-        (string) ($_POST['status'] ?? ''),
-        trim((string) ($_POST['feedback'] ?? '')) ?: null
-    );
-
-    if ($result['success']) {
-        $query = $_SERVER['QUERY_STRING'] ? '?' . $_SERVER['QUERY_STRING'] . '&' : '?';
-        header('Location: applications.php' . $query . 'message=' . urlencode($result['message']));
-        exit;
-    }
-
-    $error = $result['message'];
-}
-
 $vacancyId = isset($_GET['vacancy_id']) ? (int) $_GET['vacancy_id'] : 0;
 $status = (string) ($_GET['status'] ?? '');
 $message = (string) ($_GET['message'] ?? '');
 $selectedVacancy = null;
+$rankedSections = [];
+$filledBanner = '';
 
 if ($vacancyId > 0) {
     $selectedVacancy = $vacancyModel->getById($vacancyId);
@@ -41,9 +23,23 @@ if ($vacancyId > 0) {
         if ($status !== '') {
             $applications = array_values(array_filter($applications, fn($app) => $app['status'] === $status));
         }
+        $ranked = $controller->listShortlistedRanked($vacancyId, $companyId);
+        if ($ranked !== []) {
+            $rankedSections[] = ['vacancy' => $selectedVacancy, 'candidates' => $ranked];
+        }
+        $numberOfPosts = max(1, (int) ($selectedVacancy['number_of_posts'] ?? 1));
+        if (($selectedVacancy['status'] ?? '') === 'closed' && $vacancyModel->getHiredCount($vacancyId) >= $numberOfPosts) {
+            $filledBanner = 'This vacancy is closed - all ' . $numberOfPosts . ' position(s) have been filled.';
+        }
     }
 } else {
     $applications = $controller->listForCompany($companyId, $status !== '' ? $status : null);
+    foreach ($vacancyModel->getByCompany($companyId) as $vacancy) {
+        $ranked = $controller->listShortlistedRanked((int) $vacancy['vacancy_id'], $companyId);
+        if ($ranked !== []) {
+            $rankedSections[] = ['vacancy' => $vacancy, 'candidates' => $ranked];
+        }
+    }
 }
 ?>
 <!doctype html>
@@ -67,8 +63,8 @@ if ($vacancyId > 0) {
         <?php if ($message !== ''): ?>
             <div class="form-alert"><?php echo e($message); ?></div>
         <?php endif; ?>
-        <?php if ($error !== ''): ?>
-            <div class="form-alert" role="alert"><?php echo e($error); ?></div>
+        <?php if ($filledBanner !== ''): ?>
+            <div class="form-alert"><?php echo e($filledBanner); ?></div>
         <?php endif; ?>
 
         <section class="admin-panel" aria-labelledby="applications-filter-title">
@@ -116,26 +112,52 @@ if ($vacancyId > 0) {
                                 <p><?php echo e($application['applicant_name']); ?></p>
                                 <span class="approval-meta">
                                     <?php if (!$selectedVacancy): ?>
-                                        <?php echo e($application['vacancy_title']); ?> ·
+                                        <?php echo e($application['vacancy_title']); ?> -
                                     <?php endif; ?>
                                     Applied <?php echo e(formatDate($application['applied_at'])); ?>
                                 </span>
                                 <span class="status-tag <?php echo e(statusClass($application['status'])); ?>"><?php echo e(ucfirst($application['status'])); ?></span>
                             </div>
                             <div class="approval-actions">
-                                <?php foreach (['shortlisted' => 'Shortlist', 'rejected' => 'Reject', 'hired' => 'Hire'] as $nextStatus => $label): ?>
-                                    <form method="post">
-                                        <input type="hidden" name="app_id" value="<?php echo e((string) $application['app_id']); ?>">
-                                        <input type="hidden" name="status" value="<?php echo e($nextStatus); ?>">
-                                        <button class="<?php echo $nextStatus === 'rejected' ? 'button-outline reject' : 'button-primary'; ?>" type="submit"><?php echo e($label); ?></button>
-                                    </form>
-                                <?php endforeach; ?>
+                                <a class="button-primary" href="application-detail.php?app_id=<?php echo e((string) $application['app_id']); ?>">View application</a>
                             </div>
                         </article>
                     <?php endforeach; ?>
                 <?php endif; ?>
             </div>
         </section>
+
+        <?php if ($rankedSections !== []): ?>
+            <section class="admin-panel report-preview" aria-labelledby="shortlisted-title">
+                <div class="admin-section-heading">
+                    <h2 id="shortlisted-title">Shortlisted candidates</h2>
+                    <p>Ranked by exam score. Candidates without scores remain visible and must be scored before hiring.</p>
+                </div>
+
+                <?php foreach ($rankedSections as $section): ?>
+                    <div class="admin-section-heading">
+                        <h3><?php echo e((string) $section['vacancy']['title']); ?></h3>
+                    </div>
+                    <div class="approval-list">
+                        <?php foreach ($section['candidates'] as $index => $candidate): ?>
+                            <article class="approval-item">
+                                <div class="approval-primary">
+                                    <p>#<?php echo e((string) ($index + 1)); ?> <?php echo e((string) $candidate['applicant_name']); ?></p>
+                                    <?php if ((int) $candidate['has_score'] === 1): ?>
+                                        <span class="status-tag shortlisted"><?php echo e(number_format((float) $candidate['score'], 2)); ?>/100</span>
+                                    <?php else: ?>
+                                        <span class="status-tag closed">Not scored yet</span>
+                                    <?php endif; ?>
+                                </div>
+                                <div class="approval-actions">
+                                    <a class="button-primary" href="application-detail.php?app_id=<?php echo e((string) $candidate['app_id']); ?>">View / Score / Hire</a>
+                                </div>
+                            </article>
+                        <?php endforeach; ?>
+                    </div>
+                <?php endforeach; ?>
+            </section>
+        <?php endif; ?>
     </main>
 </body>
 </html>

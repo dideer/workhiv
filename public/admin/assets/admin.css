@@ -312,6 +312,40 @@
     font-weight: 700;
 }
 
+.turn-banner {
+    border-color: rgba(185, 138, 46, 0.28);
+    background: rgba(185, 138, 46, 0.09);
+}
+
+.turn-banner h2 {
+    margin-bottom: 6px;
+}
+
+.turn-banner p {
+    color: var(--muted);
+    font-weight: 700;
+}
+
+.turn-indicator {
+    display: inline-flex;
+    width: max-content;
+    min-height: 28px;
+    align-items: center;
+    padding: 5px 9px;
+    border: 1px solid rgba(92, 107, 99, 0.22);
+    border-radius: 5px;
+    background: rgba(92, 107, 99, 0.08);
+    color: var(--muted);
+    font-size: 0.82rem;
+    font-weight: 700;
+}
+
+.turn-indicator.is-actionable {
+    border-color: rgba(185, 138, 46, 0.34);
+    background: rgba(185, 138, 46, 0.11);
+    color: var(--ink);
+}
+
 .report-filter-form {
     display: grid;
     grid-template-columns: minmax(220px, 1.2fr) repeat(2, minmax(160px, 0.8fr)) auto;

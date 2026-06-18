@@ -53,7 +53,8 @@ $canApply = in_array($role, ['job_seeker', 'employee'], true);
 $dashboardUrl = match ($role) {
     'admin' => 'admin/dashboard.php',
     'employer' => 'employer/dashboard.php',
-    'job_seeker', 'employee' => 'seeker-dashboard.php',
+    'job_seeker' => 'seeker-dashboard.php',
+    'employee' => 'employee-dashboard.php',
     default => '',
 };
 ?>

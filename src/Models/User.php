@@ -62,4 +62,15 @@ class User
 
         return $stmt->execute();
     }
+
+    public function updateCurrentCompany(int $userId, ?int $companyId): bool
+    {
+        $stmt = $this->db->prepare(
+            'UPDATE users SET current_company_id = :current_company_id WHERE user_id = :user_id'
+        );
+        $stmt->bindValue(':user_id', $userId, PDO::PARAM_INT);
+        $stmt->bindValue(':current_company_id', $companyId, $companyId === null ? PDO::PARAM_NULL : PDO::PARAM_INT);
+
+        return $stmt->execute();
+    }
 }

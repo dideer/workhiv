@@ -9,6 +9,7 @@ function e(string $value): string
 }
 
 $error = '';
+$message = (string) ($_GET['message'] ?? '');
 $email = '';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -49,6 +50,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                 <?php if ($error !== ''): ?>
                     <div class="form-alert" role="alert"><?php echo e($error); ?></div>
+                <?php endif; ?>
+                <?php if ($message !== ''): ?>
+                    <div class="form-alert"><?php echo e($message); ?></div>
                 <?php endif; ?>
 
                 <form class="auth-form" action="login.php" method="post">

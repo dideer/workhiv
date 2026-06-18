@@ -86,6 +86,10 @@ $vacancies = $vacancyModel->getByCompany($companyId);
                     <input type="text" id="title" name="title" value="<?php echo e((string) ($editVacancy['title'] ?? '')); ?>" required>
                 </div>
                 <div class="form-field">
+                    <label for="number-of-posts">Number of positions available</label>
+                    <input type="number" id="number-of-posts" name="number_of_posts" min="1" value="<?php echo e((string) ($editVacancy['number_of_posts'] ?? '1')); ?>" required>
+                </div>
+                <div class="form-field">
                     <label for="location">Location</label>
                     <input type="text" id="location" name="location" value="<?php echo e((string) ($editVacancy['location'] ?? '')); ?>" required>
                 </div>
@@ -153,6 +157,11 @@ $vacancies = $vacancyModel->getByCompany($companyId);
                             <div class="approval-primary">
                                 <p><?php echo e($vacancy['title']); ?></p>
                                 <span class="approval-meta">Deadline <?php echo e(formatDate($vacancy['deadline'])); ?> · <?php echo e((string) $vacancy['application_count']); ?> applications</span>
+                                <?php
+                                $hiredCount = (int) ($vacancy['hired_count'] ?? 0);
+                                $numberOfPosts = max(1, (int) ($vacancy['number_of_posts'] ?? 1));
+                                ?>
+                                <span class="approval-meta"><?php echo e((string) $hiredCount); ?> of <?php echo e((string) $numberOfPosts); ?> filled</span>
                                 <span class="status-tag <?php echo e(statusClass($vacancy['status'])); ?>"><?php echo e(ucfirst($vacancy['status'])); ?></span>
                             </div>
                             <div class="approval-actions">

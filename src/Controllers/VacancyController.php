@@ -29,6 +29,7 @@ class VacancyController
             $vacancyId = $this->vacancies->create([
                 'company_id' => $companyId,
                 'title' => trim($data['title']),
+                'number_of_posts' => (int) ($data['number_of_posts'] ?? 1),
                 'description' => trim($data['description']),
                 'location' => trim($data['location']),
                 'salary_range' => trim($data['salary_range']),
@@ -65,6 +66,7 @@ class VacancyController
             $this->vacancies->update($vacancyId, [
                 'company_id' => $companyId,
                 'title' => trim($data['title']),
+                'number_of_posts' => (int) ($data['number_of_posts'] ?? 1),
                 'description' => trim($data['description']),
                 'location' => trim($data['location']),
                 'salary_range' => trim($data['salary_range']),
@@ -104,6 +106,10 @@ class VacancyController
 
         if ((int) ($data['min_experience_years'] ?? -1) < 0) {
             return ['success' => false, 'message' => 'Minimum experience must be zero or greater.'];
+        }
+
+        if ((int) ($data['number_of_posts'] ?? 0) < 1) {
+            return ['success' => false, 'message' => 'Number of positions must be at least 1.'];
         }
 
         return ['success' => true, 'message' => 'Valid.'];

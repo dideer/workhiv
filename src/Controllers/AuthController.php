@@ -3,21 +3,27 @@
 require_once __DIR__ . '/../Config/Database.php';
 require_once __DIR__ . '/../Helpers/Session.php';
 require_once __DIR__ . '/../Models/User.php';
+require_once __DIR__ . '/../Models/Application.php';
 require_once __DIR__ . '/../Models/Company.php';
+require_once __DIR__ . '/../Models/EmploymentContract.php';
 require_once __DIR__ . '/../Models/Profile.php';
 
 class AuthController
 {
     private PDO $db;
     private User $users;
+    private Application $applications;
     private Company $companies;
+    private EmploymentContract $contracts;
     private Profile $profiles;
 
     public function __construct()
     {
         $this->db = Database::getConnection();
         $this->users = new User($this->db);
+        $this->applications = new Application($this->db);
         $this->companies = new Company($this->db);
+        $this->contracts = new EmploymentContract($this->db);
         $this->profiles = new Profile($this->db);
     }
 
@@ -197,6 +203,21 @@ class AuthController
             }
 
             return 'employer/dashboard.php';
+        }
+
+        if ($role === 'employee') {
+            $application = $this->applications->getLatestHiredByUserId($userId);
+            $contract = $application ? $this->contracts->getByAppId((int) $application['app_id']) : null;
+
+            if (!$contract || $contract['status'] === 'pending') {
+                return 'employee/contract.php';
+            }
+
+            if ($contract['status'] === 'agreed') {
+                return 'employee-dashboard.php';
+            }
+
+            return 'login.php';
         }
 
         return 'index.php';
