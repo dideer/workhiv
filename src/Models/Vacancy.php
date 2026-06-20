@@ -60,12 +60,23 @@ class Vacancy
     {
         $stmt = $this->db->prepare(
             'SELECT v.*,
+                    r.education_level,
+                    r.field_of_study,
+                    r.min_experience_years,
+                    r.skills_required,
+                    r.other_requirements,
                     COUNT(a.app_id) AS application_count,
                     SUM(CASE WHEN a.status = :hired_status THEN 1 ELSE 0 END) AS hired_count
              FROM vacancies v
+             LEFT JOIN vacancy_requirements r ON r.vacancy_id = v.vacancy_id
              LEFT JOIN applications a ON a.vacancy_id = v.vacancy_id
              WHERE v.company_id = :company_id
-             GROUP BY v.vacancy_id
+             GROUP BY v.vacancy_id,
+                      r.education_level,
+                      r.field_of_study,
+                      r.min_experience_years,
+                      r.skills_required,
+                      r.other_requirements
              ORDER BY v.vacancy_id DESC'
         );
         $stmt->bindValue(':hired_status', 'hired', PDO::PARAM_STR);

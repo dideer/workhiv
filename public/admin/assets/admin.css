@@ -233,11 +233,42 @@
     color: var(--ink);
 }
 
+.status-tag.exchange-awaiting-approval {
+    border: 1px solid rgba(185, 138, 46, 0.42);
+    background: rgba(185, 138, 46, 0.14);
+    color: var(--gold);
+}
+
+.status-tag.exchange-pending {
+    border: 1px solid rgba(92, 107, 99, 0.28);
+    background: rgba(92, 107, 99, 0.08);
+    color: var(--muted);
+}
+
+.status-tag.exchange-negotiating {
+    border: 1px solid rgba(43, 74, 62, 0.28);
+    background: rgba(43, 74, 62, 0.1);
+    color: var(--forest);
+}
+
+.status-tag.exchange-accepted {
+    border: 1px solid var(--forest);
+    background: var(--forest);
+    color: var(--white);
+}
+
+.status-tag.exchange-rejected {
+    border: 1px solid rgba(146, 68, 68, 0.28);
+    background: rgba(146, 68, 68, 0.1);
+    color: #924444;
+}
+
 .status-tag.approved,
 .status-tag.completed,
 .status-tag.active,
 .status-tag.shortlisted,
-.status-tag.hired {
+.status-tag.hired,
+.status-tag.accepted {
     border: 1px solid rgba(43, 74, 62, 0.28);
     background: rgba(43, 74, 62, 0.1);
     color: var(--forest);
@@ -279,6 +310,10 @@
 .tab-button.is-active {
     border-color: var(--gold);
     background: rgba(185, 138, 46, 0.12);
+}
+
+.tab-panel[hidden] {
+    display: none;
 }
 
 .approval-item {

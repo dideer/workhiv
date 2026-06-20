@@ -35,6 +35,32 @@ function statusClass(string $status): string
     return strtolower(str_replace(' ', '-', $status));
 }
 
+function exchangeStatusLabel(string $status): string
+{
+    $labels = [
+        'awaiting_approval' => 'Awaiting admin approval',
+        'pending' => 'Waiting for response',
+        'negotiating' => 'In negotiation',
+        'accepted' => 'Accepted',
+        'rejected' => 'Rejected',
+    ];
+
+    return $labels[$status] ?? ucfirst(str_replace('_', ' ', $status));
+}
+
+function exchangeStatusClass(string $status): string
+{
+    $classes = [
+        'awaiting_approval' => 'exchange-awaiting-approval',
+        'pending' => 'exchange-pending',
+        'negotiating' => 'exchange-negotiating',
+        'accepted' => 'exchange-accepted',
+        'rejected' => 'exchange-rejected',
+    ];
+
+    return $classes[$status] ?? statusClass($status);
+}
+
 function formatDate(?string $value): string
 {
     if (!$value) {

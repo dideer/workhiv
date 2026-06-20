@@ -25,7 +25,7 @@ class ExchangeRequest
         $stmt->bindValue(':exchange_type', $data['exchange_type'], PDO::PARAM_STR);
         $stmt->bindValue(':offered_amount', $data['offered_amount'] ?? null, $data['offered_amount'] === null ? PDO::PARAM_NULL : PDO::PARAM_STR);
         $stmt->bindValue(':swap_employee_id', $data['swap_employee_id'] ?? null, empty($data['swap_employee_id']) ? PDO::PARAM_NULL : PDO::PARAM_INT);
-        $stmt->bindValue(':status', $data['status'] ?? 'pending', PDO::PARAM_STR);
+        $stmt->bindValue(':status', $data['status'] ?? 'awaiting_approval', PDO::PARAM_STR);
         $stmt->bindValue(':message', $data['message'] ?? null, trim((string) ($data['message'] ?? '')) === '' ? PDO::PARAM_NULL : PDO::PARAM_STR);
         $stmt->execute();
 
@@ -39,7 +39,39 @@ class ExchangeRequest
 
     public function getReceivedByCompany(int $companyId): array
     {
-        return $this->listByCompanyColumn('er.company_b_id', $companyId);
+        return $this->listByCompanyColumn('er.company_b_id', $companyId, true);
+    }
+
+    public function getPendingApproval(): array
+    {
+        $stmt = $this->db->prepare(
+            'SELECT er.*,
+                    company_a.company_name AS company_a_name,
+                    company_b.company_name AS company_b_name,
+                    employee.full_name AS employee_name,
+                    swap_employee.full_name AS swap_employee_name
+             FROM exchange_requests er
+             INNER JOIN companies company_a ON company_a.company_id = er.company_a_id
+             INNER JOIN companies company_b ON company_b.company_id = er.company_b_id
+             INNER JOIN users employee ON employee.user_id = er.employee_id
+             LEFT JOIN users swap_employee ON swap_employee.user_id = er.swap_employee_id
+             WHERE er.status = :status
+             ORDER BY er.created_at DESC, er.request_id DESC'
+        );
+        $stmt->bindValue(':status', 'awaiting_approval', PDO::PARAM_STR);
+        $stmt->execute();
+
+        return $stmt->fetchAll();
+    }
+
+    public function approve(int $requestId, int $adminUserId): bool
+    {
+        return $this->adminSetStatus($requestId, $adminUserId, 'pending');
+    }
+
+    public function adminReject(int $requestId, int $adminUserId): bool
+    {
+        return $this->adminSetStatus($requestId, $adminUserId, 'rejected');
     }
 
     public function getById(int $requestId): ?array
@@ -97,10 +129,28 @@ class ExchangeRequest
         return (bool) $stmt->fetchColumn();
     }
 
-    private function listByCompanyColumn(string $column, int $companyId): array
+    private function adminSetStatus(int $requestId, int $adminUserId, string $status): bool
     {
+        if ($requestId <= 0 || $adminUserId <= 0 || !in_array($status, ['pending', 'rejected'], true)) {
+            return false;
+        }
+
         $stmt = $this->db->prepare(
-            'SELECT er.*,
+            'UPDATE exchange_requests
+             SET status = :status
+             WHERE request_id = :request_id
+               AND status = :current_status'
+        );
+        $stmt->bindValue(':status', $status, PDO::PARAM_STR);
+        $stmt->bindValue(':request_id', $requestId, PDO::PARAM_INT);
+        $stmt->bindValue(':current_status', 'awaiting_approval', PDO::PARAM_STR);
+
+        return $stmt->execute() && $stmt->rowCount() > 0;
+    }
+
+    private function listByCompanyColumn(string $column, int $companyId, bool $hideAwaitingApproval = false): array
+    {
+        $sql = 'SELECT er.*,
                     company_b.company_name AS company_b_name,
                     company_a.company_name AS company_a_name,
                     employee.full_name AS employee_name,
@@ -110,10 +160,19 @@ class ExchangeRequest
              INNER JOIN companies company_b ON company_b.company_id = er.company_b_id
              INNER JOIN users employee ON employee.user_id = er.employee_id
              LEFT JOIN users swap_employee ON swap_employee.user_id = er.swap_employee_id
-             WHERE ' . $column . ' = :company_id
-             ORDER BY er.request_id DESC'
-        );
+             WHERE ' . $column . ' = :company_id';
+
+        if ($hideAwaitingApproval) {
+            $sql .= ' AND er.status != :awaiting_status';
+        }
+
+        $sql .= ' ORDER BY er.request_id DESC';
+
+        $stmt = $this->db->prepare($sql);
         $stmt->bindValue(':company_id', $companyId, PDO::PARAM_INT);
+        if ($hideAwaitingApproval) {
+            $stmt->bindValue(':awaiting_status', 'awaiting_approval', PDO::PARAM_STR);
+        }
         $stmt->execute();
 
         return $stmt->fetchAll();

@@ -1,7 +1,9 @@
 <?php
 require_once __DIR__ . '/../../src/Helpers/Session.php';
 require_once __DIR__ . '/../../src/Models/Admin.php';
+require_once __DIR__ . '/../../src/Models/ExchangeRequest.php';
 require_once __DIR__ . '/../../src/Controllers/CompanyController.php';
+require_once __DIR__ . '/../../src/Controllers/ExchangeController.php';
 
 Session::start();
 
@@ -36,9 +38,19 @@ function rowValue(array $row, array $keys, string $fallback = 'Not provided'): s
     return $fallback;
 }
 
+function exchangeTerms(array $exchange): string
+{
+    if (($exchange['exchange_type'] ?? '') === 'paid') {
+        return 'Offered amount: ' . ($exchange['offered_amount'] !== null ? number_format((float) $exchange['offered_amount'], 2) : 'Not provided');
+    }
+
+    return 'Swap employee: ' . rowValue($exchange, ['swap_employee_name'], 'Not provided');
+}
+
 $adminName = (string) ($_SESSION['full_name'] ?? 'Admin User');
 $message = '';
 $error = '';
+$postedExchangeAction = false;
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'approve_company') {
     $controller = new CompanyController();
@@ -52,10 +64,33 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'appro
     $error = $result['message'];
 }
 
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && in_array(($_POST['action'] ?? ''), ['approve_exchange', 'reject_exchange'], true)) {
+    $postedExchangeAction = true;
+    $controller = new ExchangeController();
+    $action = (string) $_POST['action'];
+    $requestId = (int) ($_POST['request_id'] ?? 0);
+    $adminUserId = (int) ($_SESSION['user_id'] ?? 0);
+    $result = $action === 'approve_exchange'
+        ? $controller->adminApprove($requestId, $adminUserId)
+        : $controller->adminReject($requestId, $adminUserId);
+
+    if ($result['success']) {
+        header('Location: approvals.php?tab=exchanges&message=' . urlencode($result['message']));
+        exit;
+    }
+
+    $error = $result['message'];
+}
+
 $message = (string) ($_GET['message'] ?? $message);
 $adminModel = new Admin();
+$exchangeModel = new ExchangeRequest();
 $pendingEmployers = $adminModel->pendingEmployers();
-$pendingExchanges = $adminModel->pendingExchangeRequests();
+$pendingExchanges = $exchangeModel->getPendingApproval();
+$activeTab = (string) ($_GET['tab'] ?? ($postedExchangeAction ? 'exchanges' : 'employers'));
+if (!in_array($activeTab, ['employers', 'exchanges'], true)) {
+    $activeTab = 'employers';
+}
 ?>
 <!doctype html>
 <html lang="en">
@@ -112,11 +147,11 @@ $pendingExchanges = $adminModel->pendingExchangeRequests();
 
         <section class="admin-panel approvals-panel" aria-label="Pending approvals">
             <div class="tab-list" role="tablist" aria-label="Approval categories">
-                <button class="tab-button is-active" type="button" role="tab" aria-selected="true" data-tab="employers">Employer registrations</button>
-                <button class="tab-button" type="button" role="tab" aria-selected="false" data-tab="exchanges">Exchange requests</button>
+                <button class="tab-button <?php echo $activeTab === 'employers' ? 'is-active' : ''; ?>" id="tab-employers-button" type="button" role="tab" aria-selected="<?php echo $activeTab === 'employers' ? 'true' : 'false'; ?>" aria-controls="tab-employers" data-tab="employers" data-tab-target="tab-employers">Employer registrations</button>
+                <button class="tab-button <?php echo $activeTab === 'exchanges' ? 'is-active' : ''; ?>" id="tab-exchanges-button" type="button" role="tab" aria-selected="<?php echo $activeTab === 'exchanges' ? 'true' : 'false'; ?>" aria-controls="tab-exchanges" data-tab="exchanges" data-tab-target="tab-exchanges">Exchange requests</button>
             </div>
 
-            <div class="approval-list tab-panel is-active" data-panel="employers">
+            <div class="approval-list tab-panel <?php echo $activeTab === 'employers' ? 'is-active' : ''; ?>" id="tab-employers" role="tabpanel" aria-labelledby="tab-employers-button" data-panel="employers" <?php echo $activeTab === 'employers' ? '' : 'hidden'; ?>>
                 <?php if ($pendingEmployers === []): ?>
                     <div class="empty-state">
                         <h3>No pending employer registrations</h3>
@@ -142,7 +177,7 @@ $pendingExchanges = $adminModel->pendingExchangeRequests();
                 <?php endif; ?>
             </div>
 
-            <div class="approval-list tab-panel" data-panel="exchanges" hidden>
+            <div class="approval-list tab-panel <?php echo $activeTab === 'exchanges' ? 'is-active' : ''; ?>" id="tab-exchanges" role="tabpanel" aria-labelledby="tab-exchanges-button" data-panel="exchanges" <?php echo $activeTab === 'exchanges' ? '' : 'hidden'; ?>>
                 <?php if ($pendingExchanges === []): ?>
                     <div class="empty-state">
                         <h3>No pending exchange requests</h3>
@@ -152,13 +187,22 @@ $pendingExchanges = $adminModel->pendingExchangeRequests();
                     <?php foreach ($pendingExchanges as $exchange): ?>
                         <article class="approval-item">
                             <div class="approval-primary">
-                                <p><?php echo e(rowValue($exchange, ['source_company', 'from_company', 'company_a'], 'Company A')); ?> to <?php echo e(rowValue($exchange, ['target_company', 'to_company', 'company_b'], 'Company B')); ?></p>
+                                <p><?php echo e((string) $exchange['company_a_name']); ?> to <?php echo e((string) $exchange['company_b_name']); ?></p>
                                 <span class="approval-meta">Employee: <?php echo e(rowValue($exchange, ['employee_name', 'employee_full_name'], 'Not provided')); ?> - <?php echo e(submittedDate($exchange)); ?></span>
-                                <span class="type-badge"><?php echo e(rowValue($exchange, ['exchange_type', 'type'], 'Exchange')); ?></span>
+                                <span class="approval-meta"><?php echo e(exchangeTerms($exchange)); ?></span>
+                                <span class="type-badge"><?php echo e(ucfirst((string) $exchange['exchange_type'])); ?></span>
                             </div>
                             <div class="approval-actions">
-                                <button class="button-primary" type="button" data-action="approved">Approve</button>
-                                <button class="button-outline reject" type="button" data-action="rejected">Reject</button>
+                                <form method="post">
+                                    <input type="hidden" name="action" value="approve_exchange">
+                                    <input type="hidden" name="request_id" value="<?php echo e((string) $exchange['request_id']); ?>">
+                                    <button class="button-primary" type="submit">Approve</button>
+                                </form>
+                                <form method="post">
+                                    <input type="hidden" name="action" value="reject_exchange">
+                                    <input type="hidden" name="request_id" value="<?php echo e((string) $exchange['request_id']); ?>">
+                                    <button class="button-outline reject" type="submit">Reject</button>
+                                </form>
                             </div>
                         </article>
                     <?php endforeach; ?>
@@ -167,6 +211,6 @@ $pendingExchanges = $adminModel->pendingExchangeRequests();
         </section>
     </main>
 
-    <script src="assets/admin.js"></script>
+    <script src="assets/admin.js?v=20260619"></script>
 </body>
 </html>

@@ -108,7 +108,7 @@ class ExchangeController
             'exchange_type' => $exchangeType,
             'offered_amount' => $exchangeType === 'paid' ? $offeredAmount : null,
             'swap_employee_id' => $exchangeType === 'swap' ? $swapEmployeeId : null,
-            'status' => 'pending',
+            'status' => 'awaiting_approval',
             'message' => trim($message),
         ]);
 
@@ -252,6 +252,28 @@ class ExchangeController
         return $request;
     }
 
+    public function adminApprove(int $requestId, int $adminUserId): array
+    {
+        if (($_SESSION['role'] ?? '') !== 'admin') {
+            return ['success' => false, 'message' => 'Only administrators can approve exchange requests.'];
+        }
+
+        return $this->requests->approve($requestId, $adminUserId)
+            ? ['success' => true, 'message' => 'Exchange request approved.']
+            : ['success' => false, 'message' => 'Exchange request could not be approved.'];
+    }
+
+    public function adminReject(int $requestId, int $adminUserId): array
+    {
+        if (($_SESSION['role'] ?? '') !== 'admin') {
+            return ['success' => false, 'message' => 'Only administrators can reject exchange requests.'];
+        }
+
+        return $this->requests->adminReject($requestId, $adminUserId)
+            ? ['success' => true, 'message' => 'Exchange request rejected.']
+            : ['success' => false, 'message' => 'Exchange request could not be rejected.'];
+    }
+
     private function validateTerms(int $companyId, string $exchangeType, ?float $offeredAmount, ?int $swapEmployeeId): array
     {
         if (!in_array($exchangeType, ['paid', 'swap'], true)) {
@@ -327,7 +349,9 @@ class ExchangeController
         $companyBId = (int) $request['company_b_id'];
         $turnCompanyId = null;
 
-        if ($status === 'pending') {
+        if ($status === 'awaiting_approval') {
+            $turnCompanyId = null;
+        } elseif ($status === 'pending') {
             $turnCompanyId = $companyBId;
         } elseif ($status === 'negotiating' && $latest !== null) {
             $latestProposedBy = (int) $latest['proposed_by'];

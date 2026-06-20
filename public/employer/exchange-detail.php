@@ -25,6 +25,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 
 $detail = $controller->getRequestDetail($requestId, $companyId);
+if ($detail && (int) $detail['company_b_id'] === $companyId && (string) $detail['status'] === 'awaiting_approval') {
+    header('Location: exchange-requests.php?message=' . urlencode('This request is not available yet.'));
+    exit;
+}
 $ownEmployees = $controller->listCompanyEmployees($companyId);
 $isClosed = $detail && in_array((string) $detail['status'], ['accepted', 'rejected'], true);
 $isActionable = $detail && !$isClosed && !empty($detail['is_my_turn']);
@@ -61,7 +65,7 @@ $waitingForCompanyName = $detail ? (string) ($detail['waiting_for_company_name']
                 <div class="admin-section-heading">
                     <h2 id="request-title"><?php echo e((string) $detail['employee_name']); ?></h2>
                     <p><?php echo e((string) $detail['company_a_name']); ?> requesting from <?php echo e((string) $detail['company_b_name']); ?></p>
-                    <span class="status-tag <?php echo e(statusClass((string) $detail['status'])); ?>"><?php echo e(ucfirst((string) $detail['status'])); ?></span>
+                    <span class="status-tag <?php echo e(exchangeStatusClass((string) $detail['status'])); ?>"><?php echo e(exchangeStatusLabel((string) $detail['status'])); ?></span>
                 </div>
                 <div class="company-summary">
                     <div><span>Exchange type</span><strong><?php echo e(ucfirst((string) $detail['exchange_type'])); ?></strong></div>
@@ -127,6 +131,13 @@ $waitingForCompanyName = $detail ? (string) ($detail['waiting_for_company_name']
                         </div>
                         <button class="button-primary" type="submit">Negotiate</button>
                     </form>
+                </section>
+            <?php elseif (($detail['status'] ?? '') === 'awaiting_approval'): ?>
+                <section class="admin-panel report-preview turn-banner" aria-labelledby="approval-title">
+                    <div>
+                        <h2 id="approval-title">Awaiting administrator approval</h2>
+                        <p>This request is awaiting administrator approval before proceeding.</p>
+                    </div>
                 </section>
             <?php elseif (!$isClosed && $waitingForCompanyName !== ''): ?>
                 <section class="admin-panel report-preview turn-banner" aria-labelledby="waiting-title">

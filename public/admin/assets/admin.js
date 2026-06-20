@@ -1,22 +1,29 @@
 function initTabs() {
-    const tabs = document.querySelectorAll("[data-tab]");
-    const panels = document.querySelectorAll("[data-panel]");
-    if (tabs.length === 0 || panels.length === 0) return;
+    const tabLists = document.querySelectorAll(".tab-list");
+    if (tabLists.length === 0) return;
 
-    tabs.forEach((tab) => {
-        tab.addEventListener("click", () => {
-            const target = tab.dataset.tab;
+    tabLists.forEach((tabList) => {
+        const container = tabList.closest(".approvals-panel") || document;
+        const tabs = tabList.querySelectorAll("[data-tab-target], [data-tab]");
+        if (tabs.length === 0) return;
 
-            tabs.forEach((item) => {
-                const isActive = item === tab;
-                item.classList.toggle("is-active", isActive);
-                item.setAttribute("aria-selected", String(isActive));
-            });
+        tabs.forEach((tab) => {
+            tab.addEventListener("click", () => {
+                const targetId = tab.dataset.tabTarget;
+                const targetPanel = tab.dataset.tab;
+                const panels = container.querySelectorAll(".tab-panel");
 
-            panels.forEach((panel) => {
-                const isActive = panel.dataset.panel === target;
-                panel.classList.toggle("is-active", isActive);
-                panel.hidden = !isActive;
+                tabs.forEach((item) => {
+                    const isActive = item === tab;
+                    item.classList.toggle("is-active", isActive);
+                    item.setAttribute("aria-selected", String(isActive));
+                });
+
+                panels.forEach((panel) => {
+                    const isActive = (targetId && panel.id === targetId) || (targetPanel && panel.dataset.panel === targetPanel);
+                    panel.classList.toggle("is-active", isActive);
+                    panel.hidden = !isActive;
+                });
             });
         });
     });
