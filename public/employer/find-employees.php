@@ -10,13 +10,18 @@ $search = trim((string) ($_GET['search'] ?? ''));
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $exchangeType = (string) ($_POST['exchange_type'] ?? '');
+    $hasAmount = $exchangeType === 'paid' || ($exchangeType === 'swap' && !empty($_POST['add_amount']));
+    $offeredAmount = $hasAmount ? (float) ($_POST['offered_amount'] ?? 0) : null;
+    $swapEmployeeId = isset($_POST['swap_employee_id']) && $_POST['swap_employee_id'] !== ''
+        ? (int) $_POST['swap_employee_id']
+        : null;
     $result = $controller->sendRequest(
         $companyId,
         (int) ($_POST['employee_id'] ?? 0),
         (int) ($_POST['company_b_id'] ?? 0),
         $exchangeType,
-        $exchangeType === 'paid' ? (float) ($_POST['offered_amount'] ?? 0) : null,
-        $exchangeType === 'swap' ? (int) ($_POST['swap_employee_id'] ?? 0) : null,
+        $offeredAmount,
+        $swapEmployeeId,
         trim((string) ($_POST['message'] ?? ''))
     );
 
@@ -85,30 +90,34 @@ $ownEmployees = $controller->listCompanyEmployees($companyId);
                             </div>
                             <details>
                                 <summary class="button-primary">Request exchange</summary>
-                                <form class="profile-form edit-panel" method="post">
+                                <form class="profile-form edit-panel" method="post" data-exchange-request-form>
                                     <input type="hidden" name="employee_id" value="<?php echo e((string) $employee['user_id']); ?>">
                                     <input type="hidden" name="company_b_id" value="<?php echo e((string) $employee['current_company_id']); ?>">
                                     <div class="form-grid">
                                         <div class="form-field">
                                             <label>Exchange type</label>
-                                            <select name="exchange_type" required>
+                                            <select name="exchange_type" required data-exchange-type>
                                                 <option value="paid">Paid</option>
                                                 <option value="swap">Swap</option>
                                             </select>
                                         </div>
-                                        <div class="form-field">
+                                        <div class="form-field" data-amount-field>
                                             <label>Offered amount</label>
-                                            <input type="number" name="offered_amount" min="0" step="0.01">
+                                            <input type="number" name="offered_amount" min="0.01" step="0.01" data-amount-input>
                                         </div>
-                                        <div class="form-field full-span">
+                                        <div class="form-field full-span" data-swap-field>
                                             <label>Swap employee</label>
-                                            <select name="swap_employee_id">
+                                            <select name="swap_employee_id" data-swap-input>
                                                 <option value="">Choose one of your employees</option>
                                                 <?php foreach ($ownEmployees as $ownEmployee): ?>
                                                     <option value="<?php echo e((string) $ownEmployee['user_id']); ?>"><?php echo e((string) $ownEmployee['full_name']); ?> - <?php echo e((string) ($ownEmployee['vacancy_title'] ?? 'Employee')); ?></option>
                                                 <?php endforeach; ?>
                                             </select>
                                         </div>
+                                        <label class="checkbox-field full-span" data-add-amount-wrap>
+                                            <input type="checkbox" name="add_amount" value="1" data-add-amount-toggle>
+                                            <span>Also add a cash amount</span>
+                                        </label>
                                         <div class="form-field full-span">
                                             <label>Message</label>
                                             <textarea name="message" rows="4"></textarea>
@@ -123,5 +132,51 @@ $ownEmployees = $controller->listCompanyEmployees($companyId);
             </div>
         </section>
     </main>
+    <script>
+        (() => {
+            document.querySelectorAll('[data-exchange-request-form]').forEach((form) => {
+                const type = form.querySelector('[data-exchange-type]');
+                const amountField = form.querySelector('[data-amount-field]');
+                const amountInput = form.querySelector('[data-amount-input]');
+                const swapField = form.querySelector('[data-swap-field]');
+                const swapInput = form.querySelector('[data-swap-input]');
+                const addAmountWrap = form.querySelector('[data-add-amount-wrap]');
+                const addAmountToggle = form.querySelector('[data-add-amount-toggle]');
+
+                if (!type || !amountField || !amountInput || !swapField || !swapInput || !addAmountWrap || !addAmountToggle) {
+                    return;
+                }
+
+                function syncFields() {
+                    const isPaid = type.value === 'paid';
+                    const useAmount = isPaid || addAmountToggle.checked;
+
+                    swapField.hidden = isPaid;
+                    swapInput.disabled = isPaid;
+                    if (isPaid) {
+                        swapInput.value = '';
+                    }
+
+                    addAmountWrap.hidden = isPaid;
+                    addAmountToggle.disabled = isPaid;
+                    if (isPaid) {
+                        addAmountToggle.checked = false;
+                    }
+
+                    amountField.hidden = !useAmount;
+                    amountInput.disabled = !useAmount;
+                    amountInput.required = isPaid;
+                    if (!useAmount) {
+                        amountInput.value = '';
+                    }
+                }
+
+                type.addEventListener('change', syncFields);
+                addAmountToggle.addEventListener('change', syncFields);
+                form.addEventListener('submit', syncFields);
+                syncFields();
+            });
+        })();
+    </script>
 </body>
 </html>

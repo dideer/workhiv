@@ -4,6 +4,7 @@ require_once __DIR__ . '/../Config/Database.php';
 require_once __DIR__ . '/../Models/ExchangeRequest.php';
 require_once __DIR__ . '/../Models/ExchangeNegotiation.php';
 require_once __DIR__ . '/../Models/ExchangeContract.php';
+require_once __DIR__ . '/../Models/ExchangeEmployeeContract.php';
 require_once __DIR__ . '/../Models/PaymentRecord.php';
 require_once __DIR__ . '/../Models/User.php';
 
@@ -13,6 +14,7 @@ class ExchangeController
     private ExchangeRequest $requests;
     private ExchangeNegotiation $negotiations;
     private ExchangeContract $contracts;
+    private ExchangeEmployeeContract $employeeContracts;
     private PaymentRecord $payments;
     private User $users;
 
@@ -22,6 +24,7 @@ class ExchangeController
         $this->requests = new ExchangeRequest($this->db);
         $this->negotiations = new ExchangeNegotiation($this->db);
         $this->contracts = new ExchangeContract($this->db);
+        $this->employeeContracts = new ExchangeEmployeeContract($this->db);
         $this->payments = new PaymentRecord($this->db);
         $this->users = new User($this->db);
     }
@@ -92,7 +95,34 @@ class ExchangeController
 
     public function sendRequest(int $companyAId, int $employeeId, int $companyBId, string $exchangeType, ?float $offeredAmount, ?int $swapEmployeeId, string $message): array
     {
-        $validation = $this->validateTerms($companyAId, $exchangeType, $offeredAmount, $swapEmployeeId);
+        if (!in_array($exchangeType, ['paid', 'swap'], true)) {
+            return ['success' => false, 'message' => 'Invalid exchange type.'];
+        }
+
+        if ($exchangeType === 'paid') {
+            if ($swapEmployeeId !== null) {
+                return ['success' => false, 'message' => 'Paid requests cannot include a swap employee.'];
+            }
+
+            if ($offeredAmount === null || $offeredAmount <= 0) {
+                return ['success' => false, 'message' => 'Please enter a valid offered amount.'];
+            }
+        }
+
+        if ($exchangeType === 'swap') {
+            if ($swapEmployeeId === null || $swapEmployeeId <= 0) {
+                return ['success' => false, 'message' => 'Please choose an employee to offer for the swap.'];
+            }
+
+            $validation = $this->validateTerms($companyAId, $offeredAmount, $swapEmployeeId);
+            if (!$validation['success']) {
+                return $validation;
+            }
+        }
+
+        if ($exchangeType === 'paid') {
+            $validation = $this->validateTerms($companyAId, $offeredAmount, null);
+        }
         if (!$validation['success']) {
             return $validation;
         }
@@ -106,7 +136,7 @@ class ExchangeController
             'company_b_id' => $companyBId,
             'employee_id' => $employeeId,
             'exchange_type' => $exchangeType,
-            'offered_amount' => $exchangeType === 'paid' ? $offeredAmount : null,
+            'offered_amount' => $offeredAmount,
             'swap_employee_id' => $exchangeType === 'swap' ? $swapEmployeeId : null,
             'status' => 'awaiting_approval',
             'message' => trim($message),
@@ -135,10 +165,13 @@ class ExchangeController
         }
 
         if ($action === 'negotiate') {
-            $exchangeType = (string) $request['exchange_type'];
-            $amount = $exchangeType === 'paid' ? (float) ($counterData['offered_amount'] ?? 0) : null;
-            $swapEmployeeId = $exchangeType === 'swap' ? (int) ($counterData['swap_employee_id'] ?? 0) : null;
-            $validation = $this->validateTerms($companyId, $exchangeType, $amount, $swapEmployeeId);
+            $addAmount = !empty($counterData['add_amount']);
+            $amount = $addAmount ? (float) ($counterData['offered_amount'] ?? 0) : null;
+
+            $addSwap = !empty($counterData['add_swap']) || !empty($counterData['swap_employee_id']);
+            $swapEmployeeId = $addSwap ? (int) ($counterData['swap_employee_id'] ?? 0) : null;
+
+            $validation = $this->validateTerms((int) $request['company_a_id'], $amount, $swapEmployeeId);
             if (!$validation['success']) {
                 return $validation;
             }
@@ -162,24 +195,44 @@ class ExchangeController
             return ['success' => false, 'message' => 'Invalid exchange action.'];
         }
 
+        $freshRequest = $this->requests->getById($requestId);
+        if (!$freshRequest) {
+            return ['success' => false, 'message' => 'Exchange request not found.'];
+        }
+
+        $history = $this->negotiations->getByRequestId($requestId);
+        $latest = $history === [] ? null : $history[count($history) - 1];
+        $finalAmount = $latest !== null
+            ? ($latest['proposed_amount'] !== null ? (float) $latest['proposed_amount'] : null)
+            : ($freshRequest['offered_amount'] !== null ? (float) $freshRequest['offered_amount'] : null);
+        $swapEmployeeId = $latest !== null
+            ? ($latest['swap_employee_id'] !== null ? (int) $latest['swap_employee_id'] : null)
+            : (!empty($freshRequest['swap_employee_id']) ? (int) $freshRequest['swap_employee_id'] : null);
+        $swapEmployeeName = $latest !== null
+            ? ($latest['swap_employee_id'] !== null ? (string) ($latest['swap_employee_name'] ?? '') : null)
+            : (!empty($freshRequest['swap_employee_name']) ? (string) $freshRequest['swap_employee_name'] : null);
+
+        if ($finalAmount === null && $swapEmployeeId === null) {
+            return ['success' => false, 'message' => 'Accepted terms must include an amount, a swap employee, or both.'];
+        }
+
+        $proofFile = is_array($counterData['payment_proof'] ?? null) ? $counterData['payment_proof'] : null;
+        if ($finalAmount !== null) {
+            $proofValidation = $this->validatePaymentProofUpload($proofFile);
+            if (!$proofValidation['success']) {
+                return $proofValidation;
+            }
+        }
+
+        $storedProofPath = null;
         try {
             $this->db->beginTransaction();
 
             $requests = new ExchangeRequest($this->db);
-            $negotiations = new ExchangeNegotiation($this->db);
             $contracts = new ExchangeContract($this->db);
+            $employeeContracts = new ExchangeEmployeeContract($this->db);
             $payments = new PaymentRecord($this->db);
             $users = new User($this->db);
-
-            $freshRequest = $requests->getById($requestId);
-            if (!$freshRequest) {
-                throw new RuntimeException('Request missing.');
-            }
-
-            $history = $negotiations->getByRequestId($requestId);
-            $latest = $history === [] ? null : $history[count($history) - 1];
-            $finalAmount = $latest && $latest['proposed_amount'] !== null ? (float) $latest['proposed_amount'] : ($freshRequest['offered_amount'] !== null ? (float) $freshRequest['offered_amount'] : null);
-            $swapEmployeeId = $latest && $latest['swap_employee_id'] !== null ? (int) $latest['swap_employee_id'] : (!empty($freshRequest['swap_employee_id']) ? (int) $freshRequest['swap_employee_id'] : null);
 
             if (!$requests->updateStatus($requestId, 'accepted')) {
                 throw new RuntimeException('Status update failed.');
@@ -190,9 +243,16 @@ class ExchangeController
                 throw new RuntimeException('Contract failed.');
             }
 
-            if ($freshRequest['exchange_type'] === 'paid' && $finalAmount !== null) {
-                if ($payments->create($contractId, $finalAmount, (int) $freshRequest['company_a_id'], (int) $freshRequest['company_b_id']) <= 0) {
+            if ($finalAmount !== null) {
+                $paymentId = $payments->create($contractId, $finalAmount, (int) $freshRequest['company_a_id'], (int) $freshRequest['company_b_id']);
+                if ($paymentId <= 0) {
                     throw new RuntimeException('Payment record failed.');
+                }
+
+                $storedProof = $this->storePaymentProofUpload($proofFile);
+                $storedProofPath = $storedProof['absolute'];
+                if (!$payments->updateProof($paymentId, $storedProof['relative'])) {
+                    throw new RuntimeException('Payment proof update failed.');
                 }
             }
 
@@ -200,12 +260,38 @@ class ExchangeController
                 throw new RuntimeException('Employee move failed.');
             }
 
-            if ($freshRequest['exchange_type'] === 'swap') {
-                if ($swapEmployeeId === null || !$this->employeeBelongsToCompany($swapEmployeeId, (int) $freshRequest['company_a_id'])) {
+            if ($swapEmployeeId !== null) {
+                if (!$this->employeeBelongsToCompany($swapEmployeeId, (int) $freshRequest['company_a_id'])) {
                     throw new RuntimeException('Swap employee invalid.');
                 }
                 if (!$users->updateCurrentCompany($swapEmployeeId, (int) $freshRequest['company_b_id'])) {
                     throw new RuntimeException('Swap move failed.');
+                }
+            }
+
+            $primaryContractText = $this->generateExchangeContractText(
+                (string) $freshRequest['employee_name'],
+                (string) $freshRequest['company_a_name'],
+                (string) $freshRequest['exchange_type'],
+                $finalAmount,
+                $swapEmployeeName
+            );
+
+            if ($employeeContracts->create($requestId, (int) $freshRequest['employee_id'], (int) $freshRequest['company_a_id'], $primaryContractText) <= 0) {
+                throw new RuntimeException('Primary employee contract failed.');
+            }
+
+            if ($swapEmployeeId !== null) {
+                $swapContractText = $this->generateExchangeContractText(
+                    (string) ($swapEmployeeName ?: 'Employee'),
+                    (string) $freshRequest['company_b_name'],
+                    (string) $freshRequest['exchange_type'],
+                    $finalAmount,
+                    (string) $freshRequest['employee_name']
+                );
+
+                if ($employeeContracts->create($requestId, $swapEmployeeId, (int) $freshRequest['company_b_id'], $swapContractText) <= 0) {
+                    throw new RuntimeException('Swap employee contract failed.');
                 }
             }
 
@@ -214,6 +300,9 @@ class ExchangeController
         } catch (Throwable $exception) {
             if ($this->db->inTransaction()) {
                 $this->db->rollBack();
+            }
+            if ($storedProofPath !== null && is_file($storedProofPath)) {
+                unlink($storedProofPath);
             }
 
             return ['success' => false, 'message' => 'Exchange request could not be accepted.'];
@@ -242,10 +331,21 @@ class ExchangeController
         }
 
         $contract = $this->contracts->getByRequestId($requestId);
-        $request['negotiations'] = $this->negotiations->getByRequestId($requestId);
+        $negotiations = $this->negotiations->getByRequestId($requestId);
+        $latest = $negotiations === [] ? null : $negotiations[count($negotiations) - 1];
+        $request['negotiations'] = $negotiations;
         $request['contract'] = $contract;
         $request['payment'] = $contract ? $this->payments->getByContractId((int) $contract['contract_id']) : null;
-        $request['turn'] = $this->resolveTurn($request, $this->negotiations->getLatestByRequestId($requestId), $companyId);
+        $request['current_swap_employee_id'] = $latest !== null
+            ? ($latest['swap_employee_id'] !== null ? (int) $latest['swap_employee_id'] : null)
+            : (!empty($request['swap_employee_id']) ? (int) $request['swap_employee_id'] : null);
+        $request['current_swap_employee_name'] = $latest !== null
+            ? ($latest['swap_employee_id'] !== null ? (string) ($latest['swap_employee_name'] ?? '') : '')
+            : (string) ($request['swap_employee_name'] ?? '');
+        $request['current_amount'] = $latest !== null
+            ? ($latest['proposed_amount'] !== null ? (float) $latest['proposed_amount'] : null)
+            : ($request['offered_amount'] !== null ? (float) $request['offered_amount'] : null);
+        $request['turn'] = $this->resolveTurn($request, $latest, $companyId);
         $request['is_my_turn'] = $request['turn']['is_my_turn'];
         $request['waiting_for_company_name'] = $request['turn']['waiting_for_company_name'];
 
@@ -274,27 +374,99 @@ class ExchangeController
             : ['success' => false, 'message' => 'Exchange request could not be rejected.'];
     }
 
-    private function validateTerms(int $companyId, string $exchangeType, ?float $offeredAmount, ?int $swapEmployeeId): array
+    private function validateTerms(int $companyAId, ?float $offeredAmount, ?int $swapEmployeeId): array
     {
-        if (!in_array($exchangeType, ['paid', 'swap'], true)) {
-            return ['success' => false, 'message' => 'Invalid exchange type.'];
+        if ($offeredAmount === null && $swapEmployeeId === null) {
+            return ['success' => false, 'message' => 'A negotiation must include an amount, a swap employee, or both.'];
         }
 
-        if ($exchangeType === 'paid' && ($offeredAmount === null || $offeredAmount <= 0)) {
+        if ($offeredAmount !== null && $offeredAmount <= 0) {
             return ['success' => false, 'message' => 'Please enter a valid offered amount.'];
         }
 
-        if ($exchangeType === 'swap') {
-            if ($swapEmployeeId === null || $swapEmployeeId <= 0) {
-                return ['success' => false, 'message' => 'Please choose an employee to offer for the swap.'];
-            }
+        if ($swapEmployeeId !== null && $swapEmployeeId <= 0) {
+            return ['success' => false, 'message' => 'Please choose an employee to offer for the swap.'];
+        }
 
-            if (!$this->employeeBelongsToCompany($swapEmployeeId, $companyId)) {
-                return ['success' => false, 'message' => 'The swap employee must belong to your company.'];
-            }
+        if ($swapEmployeeId !== null && !$this->employeeBelongsToCompany($swapEmployeeId, $companyAId)) {
+            return ['success' => false, 'message' => 'Swap employee must belong to the requesting company.'];
         }
 
         return ['success' => true, 'message' => 'Valid.'];
+    }
+
+    private function validatePaymentProofUpload(?array $file): array
+    {
+        if ($file === null || ($file['error'] ?? UPLOAD_ERR_NO_FILE) === UPLOAD_ERR_NO_FILE) {
+            return ['success' => false, 'message' => 'Please upload proof of payment before accepting this exchange.'];
+        }
+
+        if (($file['error'] ?? UPLOAD_ERR_OK) !== UPLOAD_ERR_OK) {
+            return ['success' => false, 'message' => 'Payment proof could not be uploaded.'];
+        }
+
+        if ((int) ($file['size'] ?? 0) <= 0 || (int) ($file['size'] ?? 0) > 5 * 1024 * 1024) {
+            return ['success' => false, 'message' => 'Payment proof must be a PDF, JPG, or PNG file up to 5MB.'];
+        }
+
+        $extension = strtolower(pathinfo((string) ($file['name'] ?? ''), PATHINFO_EXTENSION));
+        if (!in_array($extension, ['pdf', 'jpg', 'jpeg', 'png'], true)) {
+            return ['success' => false, 'message' => 'Payment proof must be a PDF, JPG, or PNG file.'];
+        }
+
+        $mimeType = '';
+        if (is_file((string) ($file['tmp_name'] ?? ''))) {
+            $finfo = new finfo(FILEINFO_MIME_TYPE);
+            $mimeType = (string) $finfo->file((string) $file['tmp_name']);
+        }
+
+        if (!in_array($mimeType, ['application/pdf', 'image/jpeg', 'image/png'], true)) {
+            return ['success' => false, 'message' => 'Payment proof must be a PDF, JPG, or PNG file.'];
+        }
+
+        return ['success' => true, 'message' => 'Valid.'];
+    }
+
+    private function storePaymentProofUpload(array $file): array
+    {
+        $extension = strtolower(pathinfo((string) $file['name'], PATHINFO_EXTENSION));
+        if ($extension === 'jpeg') {
+            $extension = 'jpg';
+        }
+
+        $uploadDir = dirname(__DIR__, 2) . '/public/uploads';
+        if (!is_dir($uploadDir) && !mkdir($uploadDir, 0775, true)) {
+            throw new RuntimeException('Upload directory missing.');
+        }
+
+        $filename = 'exchange_proof_' . bin2hex(random_bytes(12)) . '.' . $extension;
+        $absolutePath = $uploadDir . '/' . $filename;
+        if (!move_uploaded_file((string) $file['tmp_name'], $absolutePath)) {
+            throw new RuntimeException('Payment proof save failed.');
+        }
+
+        return [
+            'relative' => 'uploads/' . $filename,
+            'absolute' => $absolutePath,
+        ];
+    }
+
+    private function generateExchangeContractText(string $employeeName, string $newCompanyName, string $exchangeType, ?float $amount, ?string $swapPartnerName): string
+    {
+        $terms = [];
+        if ($amount !== null) {
+            $terms[] = 'cash amount of ' . number_format($amount, 2);
+        }
+        if ($swapPartnerName !== null && trim($swapPartnerName) !== '') {
+            $terms[] = 'employee swap involving ' . trim($swapPartnerName);
+        }
+
+        $termText = $terms === [] ? 'approved employee transfer' : implode(' and ', $terms);
+
+        return "EMPLOYMENT TRANSFER AGREEMENT\n\n"
+            . 'This agreement confirms the transfer of ' . $employeeName . ' to ' . $newCompanyName . ' as part of an approved employee exchange dated ' . date('F j, Y') . ".\n\n"
+            . 'Exchange terms: ' . $termText . ".\n\n"
+            . 'By accepting this agreement, the Employee confirms understanding of this transfer and agrees to continue their employment under ' . $newCompanyName . ', subject to the same terms of employment previously established, unless otherwise renegotiated.';
     }
 
     private function employeeBelongsToCompany(int $employeeId, int $companyId): bool

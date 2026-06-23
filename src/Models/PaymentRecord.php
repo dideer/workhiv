@@ -43,4 +43,17 @@ class PaymentRecord
         $payment = $stmt->fetch();
         return $payment ?: null;
     }
+
+    public function updateProof(int $paymentId, string $proofFilePath): bool
+    {
+        $stmt = $this->db->prepare(
+            'UPDATE payment_records
+             SET proof_file = :proof_file
+             WHERE payment_id = :payment_id'
+        );
+        $stmt->bindValue(':proof_file', $proofFilePath, PDO::PARAM_STR);
+        $stmt->bindValue(':payment_id', $paymentId, PDO::PARAM_INT);
+
+        return $stmt->execute();
+    }
 }

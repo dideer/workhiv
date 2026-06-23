@@ -6,6 +6,7 @@ require_once __DIR__ . '/../Models/User.php';
 require_once __DIR__ . '/../Models/Application.php';
 require_once __DIR__ . '/../Models/Company.php';
 require_once __DIR__ . '/../Models/EmploymentContract.php';
+require_once __DIR__ . '/../Models/ExchangeEmployeeContract.php';
 require_once __DIR__ . '/../Models/Profile.php';
 
 class AuthController
@@ -15,6 +16,7 @@ class AuthController
     private Application $applications;
     private Company $companies;
     private EmploymentContract $contracts;
+    private ExchangeEmployeeContract $exchangeEmployeeContracts;
     private Profile $profiles;
 
     public function __construct()
@@ -24,6 +26,7 @@ class AuthController
         $this->applications = new Application($this->db);
         $this->companies = new Company($this->db);
         $this->contracts = new EmploymentContract($this->db);
+        $this->exchangeEmployeeContracts = new ExchangeEmployeeContract($this->db);
         $this->profiles = new Profile($this->db);
     }
 
@@ -214,6 +217,10 @@ class AuthController
             }
 
             if ($contract['status'] === 'agreed') {
+                if ($this->exchangeEmployeeContracts->getPendingForEmployee($userId)) {
+                    return 'employee/exchange-contract.php';
+                }
+
                 return 'employee-dashboard.php';
             }
 

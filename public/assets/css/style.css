@@ -163,6 +163,14 @@ h3 {
     background: var(--forest);
 }
 
+.button-primary:disabled,
+.button-outline:disabled {
+    border-color: var(--line);
+    background: var(--paper-deep);
+    color: var(--muted);
+    cursor: not-allowed;
+}
+
 .button-outline {
     display: inline-flex;
     align-items: center;

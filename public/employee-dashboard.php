@@ -2,6 +2,7 @@
 require_once __DIR__ . '/../src/Helpers/Session.php';
 require_once __DIR__ . '/../src/Models/Application.php';
 require_once __DIR__ . '/../src/Models/EmploymentContract.php';
+require_once __DIR__ . '/../src/Models/ExchangeEmployeeContract.php';
 
 Session::start();
 
@@ -17,11 +18,18 @@ function e(string $value): string
 
 $applicationModel = new Application();
 $contractModel = new EmploymentContract();
+$exchangeContractModel = new ExchangeEmployeeContract();
 $application = $applicationModel->getLatestHiredByUserId((int) $_SESSION['user_id']);
 $contract = $application ? $contractModel->getByAppId((int) $application['app_id']) : null;
+$message = (string) ($_GET['message'] ?? '');
 
 if (!$application || !$contract || $contract['status'] !== 'agreed') {
     header('Location: employee/contract.php');
+    exit;
+}
+
+if ($exchangeContractModel->getPendingForEmployee((int) $_SESSION['user_id'])) {
+    header('Location: employee/exchange-contract.php');
     exit;
 }
 ?>
@@ -50,6 +58,10 @@ if (!$application || !$contract || $contract['status'] !== 'agreed') {
             <h1 id="dashboard-title">Welcome, <?php echo e((string) ($_SESSION['full_name'] ?? 'employee')); ?></h1>
             <p>Your employment contract is agreed and your employee workspace is active.</p>
 
+            <?php if ($message !== ''): ?>
+                <div class="form-alert"><?php echo e($message); ?></div>
+            <?php endif; ?>
+
             <div class="company-summary">
                 <div>
                     <span>Current position</span>
@@ -64,6 +76,11 @@ if (!$application || !$contract || $contract['status'] !== 'agreed') {
             <div class="empty-state">
                 <h3>Employee features are coming</h3>
                 <p>Future modules such as employee exchange participation will appear here.</p>
+            </div>
+
+            <div class="empty-state" style="background: var(--paper-deep);">
+                <h3>Employee Exchange - Coming Soon</h3>
+                <p>In the future, you'll be able to see and participate more directly in exchange activity involving you.</p>
             </div>
         </section>
     </main>
