@@ -117,6 +117,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $application && $contract) {
             <a class="site-logo" href="../index.php" aria-label="WorkHive home">WorkHive</a>
             <div class="nav-actions">
                 <span>Hi, <?php echo e((string) ($_SESSION['full_name'] ?? 'there')); ?></span>
+                <?php require __DIR__ . '/../partials/notification-bell.php'; ?>
                 <a class="nav-button nav-button-secondary" href="../logout.php">Log out</a>
             </div>
         </nav>

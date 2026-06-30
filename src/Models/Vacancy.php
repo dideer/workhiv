@@ -2,6 +2,7 @@
 
 require_once __DIR__ . '/../Config/Database.php';
 require_once __DIR__ . '/VacancyRequirement.php';
+require_once __DIR__ . '/../Helpers/Notifier.php';
 
 class Vacancy
 {
@@ -90,7 +91,8 @@ class Vacancy
     {
         $stmt = $this->db->prepare(
             'SELECT v.*, c.company_name, c.sector, c.description AS company_about,
-                    r.education_level, r.field_of_study, r.min_experience_years, r.skills_required, r.other_requirements
+                    r.education_level, r.field_of_study, r.min_experience_years, r.skills_required, r.other_requirements,
+                    c.user_id AS employer_user_id
              FROM vacancies v
              INNER JOIN companies c ON c.company_id = v.company_id
              LEFT JOIN vacancy_requirements r ON r.vacancy_id = v.vacancy_id
@@ -262,7 +264,19 @@ class Vacancy
             return true;
         }
 
-        return $this->close($vacancyId);
+        $closed = $this->close($vacancyId);
+        if ($closed) {
+            try {
+                $detail = $this->getById($vacancyId);
+                if ($detail && !empty($detail['employer_user_id'])) {
+                    Notifier::send((int) $detail['employer_user_id'], (string) $detail['title'] . ' is now fully staffed and has been closed.', 'vacancy', 'employer/vacancies.php');
+                }
+            } catch (Throwable $exception) {
+                error_log('Notification failed: ' . $exception->getMessage());
+            }
+        }
+
+        return $closed;
     }
 
     public function reopenIfBelowCapacity(int $vacancyId): bool

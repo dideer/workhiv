@@ -124,6 +124,7 @@ if (!in_array($activeTab, ['employers', 'exchanges'], true)) {
         </nav>
 
         <div class="admin-profile">
+            <?php require __DIR__ . '/../partials/notification-bell.php'; ?>
             <div class="admin-avatar" aria-hidden="true">AU</div>
             <div>
                 <p><?php echo e($adminName); ?></p>

@@ -79,6 +79,7 @@ $dashboardUrl = match ($role) {
                     <?php if ($dashboardUrl !== ''): ?>
                         <a class="nav-link" href="<?php echo e($dashboardUrl); ?>">Dashboard</a>
                     <?php endif; ?>
+                    <?php require __DIR__ . '/partials/notification-bell.php'; ?>
                     <a class="nav-button nav-button-secondary" href="logout.php">Log out</a>
                 <?php else: ?>
                     <a class="nav-button nav-button-secondary" href="login.php">Login</a>

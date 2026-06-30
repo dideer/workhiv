@@ -7,6 +7,7 @@ require_once __DIR__ . '/../Models/ExchangeContract.php';
 require_once __DIR__ . '/../Models/ExchangeEmployeeContract.php';
 require_once __DIR__ . '/../Models/PaymentRecord.php';
 require_once __DIR__ . '/../Models/User.php';
+require_once __DIR__ . '/../Helpers/Notifier.php';
 
 class ExchangeController
 {
@@ -142,9 +143,25 @@ class ExchangeController
             'message' => trim($message),
         ]);
 
-        return $requestId > 0
-            ? ['success' => true, 'message' => 'Exchange request sent.']
-            : ['success' => false, 'message' => 'Exchange request could not be sent.'];
+        if ($requestId <= 0) {
+            return ['success' => false, 'message' => 'Exchange request could not be sent.'];
+        }
+
+        try {
+            $createdRequest = $this->requests->getById($requestId);
+            foreach ($this->users->getByRole('admin') as $admin) {
+                Notifier::send(
+                    (int) $admin['user_id'],
+                    'New exchange request from ' . (string) ($createdRequest['company_a_name'] ?? 'a company') . ' is awaiting approval.',
+                    'exchange',
+                    'admin/approvals.php'
+                );
+            }
+        } catch (Throwable $exception) {
+            error_log('Notification failed: ' . $exception->getMessage());
+        }
+
+        return ['success' => true, 'message' => 'Exchange request sent.'];
     }
 
     public function respondToRequest(int $requestId, int $companyId, string $action, ?array $counterData = null): array
@@ -159,9 +176,27 @@ class ExchangeController
         }
 
         if ($action === 'reject') {
-            return $this->requests->updateStatus($requestId, 'rejected')
-                ? ['success' => true, 'message' => 'Exchange request rejected.']
-                : ['success' => false, 'message' => 'Exchange request could not be rejected.'];
+            if (!$this->requests->updateStatus($requestId, 'rejected')) {
+                return ['success' => false, 'message' => 'Exchange request could not be rejected.'];
+            }
+
+            try {
+                $targetUserId = (int) $companyId === (int) $request['company_a_id']
+                    ? (int) ($request['company_b_user_id'] ?? 0)
+                    : (int) ($request['company_a_user_id'] ?? 0);
+                if ($targetUserId > 0) {
+                    Notifier::send(
+                        $targetUserId,
+                        'Your exchange request for ' . (string) $request['employee_name'] . ' was declined.',
+                        'exchange',
+                        'employer/exchange-detail.php?request_id=' . $requestId
+                    );
+                }
+            } catch (Throwable $exception) {
+                error_log('Notification failed: ' . $exception->getMessage());
+            }
+
+            return ['success' => true, 'message' => 'Exchange request rejected.'];
         }
 
         if ($action === 'negotiate') {
@@ -186,6 +221,25 @@ class ExchangeController
 
             if ($created <= 0 || !$this->requests->updateStatus($requestId, 'negotiating')) {
                 return ['success' => false, 'message' => 'Counter-proposal could not be saved.'];
+            }
+
+            try {
+                $targetUserId = (int) $companyId === (int) $request['company_a_id']
+                    ? (int) ($request['company_b_user_id'] ?? 0)
+                    : (int) ($request['company_a_user_id'] ?? 0);
+                $proposerName = (int) $companyId === (int) $request['company_a_id']
+                    ? (string) $request['company_a_name']
+                    : (string) $request['company_b_name'];
+                if ($targetUserId > 0) {
+                    Notifier::send(
+                        $targetUserId,
+                        $proposerName . ' has countered the exchange terms for ' . (string) $request['employee_name'] . '.',
+                        'exchange',
+                        'employer/exchange-detail.php?request_id=' . $requestId
+                    );
+                }
+            } catch (Throwable $exception) {
+                error_log('Notification failed: ' . $exception->getMessage());
             }
 
             return ['success' => true, 'message' => 'Counter-proposal sent.'];
@@ -296,6 +350,36 @@ class ExchangeController
             }
 
             $this->db->commit();
+            try {
+                foreach ([(int) ($freshRequest['company_a_user_id'] ?? 0), (int) ($freshRequest['company_b_user_id'] ?? 0)] as $companyUserId) {
+                    if ($companyUserId > 0) {
+                        Notifier::send(
+                            $companyUserId,
+                            'Exchange request for ' . (string) $freshRequest['employee_name'] . ' has been accepted.',
+                            'exchange',
+                            'employer/exchange-detail.php?request_id=' . $requestId
+                        );
+                    }
+                }
+
+                Notifier::send(
+                    (int) $freshRequest['employee_id'],
+                    'You have a new employment transfer contract to review.',
+                    'exchange',
+                    'employee/exchange-contract.php'
+                );
+
+                if ($swapEmployeeId !== null) {
+                    Notifier::send(
+                        $swapEmployeeId,
+                        'You have a new employment transfer contract to review.',
+                        'exchange',
+                        'employee/exchange-contract.php'
+                    );
+                }
+            } catch (Throwable $exception) {
+                error_log('Notification failed: ' . $exception->getMessage());
+            }
             return ['success' => true, 'message' => 'Exchange request accepted.'];
         } catch (Throwable $exception) {
             if ($this->db->inTransaction()) {
@@ -358,9 +442,25 @@ class ExchangeController
             return ['success' => false, 'message' => 'Only administrators can approve exchange requests.'];
         }
 
-        return $this->requests->approve($requestId, $adminUserId)
-            ? ['success' => true, 'message' => 'Exchange request approved.']
-            : ['success' => false, 'message' => 'Exchange request could not be approved.'];
+        if (!$this->requests->approve($requestId, $adminUserId)) {
+            return ['success' => false, 'message' => 'Exchange request could not be approved.'];
+        }
+
+        try {
+            $request = $this->requests->getById($requestId);
+            if ($request && !empty($request['company_b_user_id'])) {
+                Notifier::send(
+                    (int) $request['company_b_user_id'],
+                    "You've received an exchange request from " . (string) $request['company_a_name'] . '.',
+                    'exchange',
+                    'employer/exchange-requests.php'
+                );
+            }
+        } catch (Throwable $exception) {
+            error_log('Notification failed: ' . $exception->getMessage());
+        }
+
+        return ['success' => true, 'message' => 'Exchange request approved.'];
     }
 
     public function adminReject(int $requestId, int $adminUserId): array

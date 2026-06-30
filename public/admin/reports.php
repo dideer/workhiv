@@ -47,6 +47,7 @@ $adminName = (string) ($_SESSION['full_name'] ?? 'Admin User');
         </nav>
 
         <div class="admin-profile">
+            <?php require __DIR__ . '/../partials/notification-bell.php'; ?>
             <div class="admin-avatar" aria-hidden="true">AU</div>
             <div>
                 <p><?php echo e($adminName); ?></p>

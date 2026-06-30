@@ -6,6 +6,7 @@
             <a class="nav-link" href="seeker-dashboard.php">Dashboard</a>
             <a class="nav-link" href="my-profile.php">My Profile</a>
             <a class="nav-link" href="my-applications.php">My Applications</a>
+            <?php require __DIR__ . '/notification-bell.php'; ?>
             <a class="nav-button nav-button-secondary" href="logout.php">Log out</a>
         </div>
     </nav>

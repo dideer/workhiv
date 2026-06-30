@@ -52,6 +52,17 @@ class User
         return (bool) $stmt->fetchColumn();
     }
 
+    public function getByRole(string $role): array
+    {
+        $stmt = $this->db->prepare(
+            'SELECT * FROM users WHERE role = :role ORDER BY user_id ASC'
+        );
+        $stmt->bindValue(':role', $role, PDO::PARAM_STR);
+        $stmt->execute();
+
+        return $stmt->fetchAll();
+    }
+
     public function updateRole(int $userId, string $role): bool
     {
         $stmt = $this->db->prepare(

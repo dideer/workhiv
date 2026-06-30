@@ -52,6 +52,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         <nav class="site-nav" aria-label="Company profile navigation">
             <a class="site-logo" href="index.php" aria-label="WorkHive home">WorkHive</a>
             <div class="nav-actions">
+                <?php require __DIR__ . '/partials/notification-bell.php'; ?>
                 <a class="nav-button nav-button-secondary" href="logout.php">Log out</a>
             </div>
         </nav>

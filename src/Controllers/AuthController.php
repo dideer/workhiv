@@ -8,6 +8,7 @@ require_once __DIR__ . '/../Models/Company.php';
 require_once __DIR__ . '/../Models/EmploymentContract.php';
 require_once __DIR__ . '/../Models/ExchangeEmployeeContract.php';
 require_once __DIR__ . '/../Models/Profile.php';
+require_once __DIR__ . '/../Helpers/Notifier.php';
 
 class AuthController
 {
@@ -123,6 +124,19 @@ class AuthController
             }
 
             return ['success' => false, 'message' => 'Registration could not be completed.'];
+        }
+
+        try {
+            foreach ($this->users->getByRole('admin') as $admin) {
+                Notifier::send(
+                    (int) $admin['user_id'],
+                    'New employer registration: ' . trim($data['company_name']) . ' is awaiting approval.',
+                    'approval',
+                    'admin/approvals.php'
+                );
+            }
+        } catch (Throwable $exception) {
+            error_log('Notification failed: ' . $exception->getMessage());
         }
 
         $user = $this->users->findByEmail(trim($data['email']));

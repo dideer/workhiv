@@ -103,7 +103,7 @@
     font-weight: 700;
 }
 
-.admin-profile a {
+.admin-profile > div a {
     color: rgba(247, 244, 236, 0.72);
     font-size: 0.9rem;
     font-weight: 600;
@@ -446,7 +446,8 @@
 
 .admin-brand a:focus-visible,
 .admin-nav-link:focus-visible,
-.admin-profile a:focus-visible,
+.admin-profile > div a:focus-visible,
+.admin-profile .notification-dropdown a:focus-visible,
 .tab-button:focus-visible,
 .button-outline:focus-visible {
     outline: 3px solid rgba(185, 138, 46, 0.42);
@@ -482,7 +483,7 @@
 
     .admin-brand span,
     .admin-nav-link span,
-    .admin-profile div:not(.admin-avatar) {
+    .admin-profile > div:not(.admin-avatar) {
         display: none;
     }
 

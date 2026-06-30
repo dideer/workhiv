@@ -40,6 +40,18 @@ class Company
         return $company ?: null;
     }
 
+    public function findById(int $companyId): ?array
+    {
+        $stmt = $this->db->prepare(
+            'SELECT * FROM companies WHERE company_id = :company_id LIMIT 1'
+        );
+        $stmt->bindValue(':company_id', $companyId, PDO::PARAM_INT);
+        $stmt->execute();
+
+        $company = $stmt->fetch();
+        return $company ?: null;
+    }
+
     public function updateByUserId(int $userId, array $data): bool
     {
         $stmt = $this->db->prepare(

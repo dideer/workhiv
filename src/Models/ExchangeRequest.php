@@ -47,7 +47,9 @@ class ExchangeRequest
         $stmt = $this->db->prepare(
             'SELECT er.*,
                     company_a.company_name AS company_a_name,
+                    company_a.user_id AS company_a_user_id,
                     company_b.company_name AS company_b_name,
+                    company_b.user_id AS company_b_user_id,
                     employee.full_name AS employee_name,
                     swap_employee.full_name AS swap_employee_name
              FROM exchange_requests er
@@ -79,7 +81,9 @@ class ExchangeRequest
         $stmt = $this->db->prepare(
             'SELECT er.*,
                     company_a.company_name AS company_a_name,
+                    company_a.user_id AS company_a_user_id,
                     company_b.company_name AS company_b_name,
+                    company_b.user_id AS company_b_user_id,
                     employee.full_name AS employee_name,
                     swap_employee.full_name AS swap_employee_name
              FROM exchange_requests er
@@ -152,7 +156,9 @@ class ExchangeRequest
     {
         $sql = 'SELECT er.*,
                     company_b.company_name AS company_b_name,
+                    company_b.user_id AS company_b_user_id,
                     company_a.company_name AS company_a_name,
+                    company_a.user_id AS company_a_user_id,
                     employee.full_name AS employee_name,
                     swap_employee.full_name AS swap_employee_name
              FROM exchange_requests er

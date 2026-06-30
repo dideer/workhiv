@@ -1,6 +1,7 @@
 <?php
 
 require_once __DIR__ . '/../Helpers/Session.php';
+require_once __DIR__ . '/../Helpers/Notifier.php';
 require_once __DIR__ . '/../Models/Company.php';
 
 class CompanyController
@@ -24,8 +25,24 @@ class CompanyController
             return ['success' => false, 'message' => 'Invalid approval request.'];
         }
 
-        return $this->companies->approve($companyId, $adminUserId)
-            ? ['success' => true, 'message' => 'Company approved.']
-            : ['success' => false, 'message' => 'Company could not be approved.'];
+        if (!$this->companies->approve($companyId, $adminUserId)) {
+            return ['success' => false, 'message' => 'Company could not be approved.'];
+        }
+
+        try {
+            $company = $this->companies->findById($companyId);
+            if ($company) {
+                Notifier::send(
+                    (int) $company['user_id'],
+                    'Your company ' . (string) $company['company_name'] . ' has been approved. You can now post vacancies.',
+                    'approval',
+                    'employer/dashboard.php'
+                );
+            }
+        } catch (Throwable $exception) {
+            error_log('Notification failed: ' . $exception->getMessage());
+        }
+
+        return ['success' => true, 'message' => 'Company approved.'];
     }
 }

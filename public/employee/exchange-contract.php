@@ -4,6 +4,7 @@ require_once __DIR__ . '/../../src/Config/Database.php';
 require_once __DIR__ . '/../../src/Models/ExchangeEmployeeContract.php';
 require_once __DIR__ . '/../../src/Models/ExchangeRequest.php';
 require_once __DIR__ . '/../../src/Models/User.php';
+require_once __DIR__ . '/../../src/Helpers/Notifier.php';
 
 Session::start();
 
@@ -91,6 +92,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $contract) {
             }
 
             $db->commit();
+            try {
+                foreach ([(int) ($request['company_a_user_id'] ?? 0), (int) ($request['company_b_user_id'] ?? 0)] as $companyUserId) {
+                    if ($companyUserId > 0) {
+                        Notifier::send(
+                            $companyUserId,
+                            'The exchange for ' . (string) $request['employee_name'] . ' was reversed - the employee did not agree to the new terms.',
+                            'exchange',
+                            'employer/exchange-detail.php?request_id=' . $requestId
+                        );
+                    }
+                }
+            } catch (Throwable $exception) {
+                error_log('Notification failed: ' . $exception->getMessage());
+            }
             header('Location: exchange-contract.php?reversed=1');
             exit;
         } catch (Throwable $exception) {
@@ -127,6 +142,7 @@ if ($contract) {
             <a class="site-logo" href="../index.php" aria-label="WorkHive home">WorkHive</a>
             <div class="nav-actions">
                 <span>Hi, <?php echo e((string) ($_SESSION['full_name'] ?? 'there')); ?></span>
+                <?php require __DIR__ . '/../partials/notification-bell.php'; ?>
                 <a class="nav-button nav-button-secondary" href="../logout.php">Log out</a>
             </div>
         </nav>

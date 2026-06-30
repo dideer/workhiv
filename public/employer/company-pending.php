@@ -36,6 +36,17 @@ if ($companyModel->isApproved((int) $company['company_id'])) {
     <link rel="stylesheet" href="../assets/css/style.css">
 </head>
 <body>
+    <header class="site-header">
+        <nav class="site-nav" aria-label="Company approval navigation">
+            <a class="site-logo" href="../index.php" aria-label="WorkHive home">WorkHive</a>
+            <div class="nav-actions">
+                <span>Hi, <?php echo e((string) ($_SESSION['full_name'] ?? 'there')); ?></span>
+                <?php require __DIR__ . '/../partials/notification-bell.php'; ?>
+                <a class="nav-button nav-button-secondary" href="../logout.php">Log out</a>
+            </div>
+        </nav>
+    </header>
+
     <main class="placeholder-main">
         <section class="placeholder-card">
             <p class="section-kicker">Company approval</p>
@@ -65,7 +76,7 @@ if ($companyModel->isApproved((int) $company['company_id'])) {
                 </div>
             </div>
 
-            <a class="button-primary" href="../logout.php">Log out</a>
+            <a class="button-primary" href="../index.php">Browse WorkHive</a>
         </section>
     </main>
 </body>

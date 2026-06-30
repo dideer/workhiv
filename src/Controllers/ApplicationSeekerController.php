@@ -3,6 +3,7 @@
 require_once __DIR__ . '/../Models/Application.php';
 require_once __DIR__ . '/../Models/Vacancy.php';
 require_once __DIR__ . '/../Models/VacancyRequirement.php';
+require_once __DIR__ . '/../Helpers/Notifier.php';
 
 class ApplicationSeekerController
 {
@@ -43,12 +44,26 @@ class ApplicationSeekerController
             ];
         }
 
-        $this->applications->create([
+        $appId = $this->applications->create([
             'user_id' => $userId,
             'vacancy_id' => $vacancyId,
             'cover_letter' => trim($coverLetter),
             'status' => 'applied',
         ]);
+
+        try {
+            $context = $this->applications->getNotificationContextByAppId($appId);
+            if ($context && !empty($context['employer_user_id'])) {
+                Notifier::send(
+                    (int) $context['employer_user_id'],
+                    'New application received for ' . (string) $context['vacancy_title'] . '.',
+                    'application',
+                    'employer/applications.php?vacancy_id=' . (int) $vacancyId
+                );
+            }
+        } catch (Throwable $exception) {
+            error_log('Notification failed: ' . $exception->getMessage());
+        }
 
         return ['success' => true, 'message' => 'Application submitted.'];
     }

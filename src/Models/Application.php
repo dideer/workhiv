@@ -112,6 +112,25 @@ class Application
         return $context ?: null;
     }
 
+    public function getNotificationContextByAppId(int $appId): ?array
+    {
+        $stmt = $this->db->prepare(
+            'SELECT a.app_id, a.user_id, a.vacancy_id, a.status,
+                    v.title AS vacancy_title,
+                    c.user_id AS employer_user_id
+             FROM applications a
+             INNER JOIN vacancies v ON v.vacancy_id = a.vacancy_id
+             INNER JOIN companies c ON c.company_id = v.company_id
+             WHERE a.app_id = :app_id
+             LIMIT 1'
+        );
+        $stmt->bindValue(':app_id', $appId, PDO::PARAM_INT);
+        $stmt->execute();
+
+        $context = $stmt->fetch();
+        return $context ?: null;
+    }
+
     public function countByUserId(int $userId, ?string $status = null): int
     {
         $sql = 'SELECT COUNT(*) FROM applications WHERE user_id = :user_id';

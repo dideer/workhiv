@@ -3,6 +3,7 @@
 require_once __DIR__ . '/../Models/Application.php';
 require_once __DIR__ . '/../Models/ExamScore.php';
 require_once __DIR__ . '/../Models/Vacancy.php';
+require_once __DIR__ . '/../Helpers/Notifier.php';
 
 class ApplicationController
 {
@@ -56,9 +57,25 @@ class ApplicationController
             return ['success' => false, 'message' => 'Application not found.'];
         }
 
-        return $this->applications->updateStatus($appId, $status, $feedback)
-            ? ['success' => true, 'message' => 'Application updated.']
-            : ['success' => false, 'message' => 'Application could not be updated.'];
+        if (!$this->applications->updateStatus($appId, $status, $feedback)) {
+            return ['success' => false, 'message' => 'Application could not be updated.'];
+        }
+
+        try {
+            $context = $this->applications->getNotificationContextByAppId($appId);
+            if ($context) {
+                Notifier::send(
+                    (int) $context['user_id'],
+                    'Your application for ' . (string) $context['vacancy_title'] . ' was ' . $status . '.',
+                    'application',
+                    'my-applications.php'
+                );
+            }
+        } catch (Throwable $exception) {
+            error_log('Notification failed: ' . $exception->getMessage());
+        }
+
+        return ['success' => true, 'message' => 'Application updated.'];
     }
 
     public function recordScore(int $appId, int $companyId, float $score, int $employerId): array
@@ -152,8 +169,27 @@ class ApplicationController
             return ['success' => false, 'message' => 'Employment contract could not be generated.'];
         }
 
-        return $this->applications->hireWithRoleUpdate($appId, (int) $application['vacancy_id'], $contractText)
-            ? ['success' => true, 'message' => 'Applicant hired.']
-            : ['success' => false, 'message' => 'Applicant could not be hired.'];
+        if (!$this->applications->hireWithRoleUpdate($appId, (int) $application['vacancy_id'], $contractText)) {
+            return ['success' => false, 'message' => 'Applicant could not be hired.'];
+        }
+
+        try {
+            Notifier::send(
+                (int) $application['user_id'],
+                "Congratulations! You've been hired for " . (string) $application['vacancy_title'] . '.',
+                'application',
+                'my-applications.php'
+            );
+            Notifier::send(
+                (int) $application['user_id'],
+                'Your employment contract for ' . (string) $application['vacancy_title'] . ' is ready to review.',
+                'contract',
+                'employee/contract.php'
+            );
+        } catch (Throwable $exception) {
+            error_log('Notification failed: ' . $exception->getMessage());
+        }
+
+        return ['success' => true, 'message' => 'Applicant hired.'];
     }
 }
