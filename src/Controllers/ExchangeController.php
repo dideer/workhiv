@@ -469,9 +469,26 @@ class ExchangeController
             return ['success' => false, 'message' => 'Only administrators can reject exchange requests.'];
         }
 
-        return $this->requests->adminReject($requestId, $adminUserId)
-            ? ['success' => true, 'message' => 'Exchange request rejected.']
-            : ['success' => false, 'message' => 'Exchange request could not be rejected.'];
+        $request = $this->requests->getById($requestId);
+
+        if (!$this->requests->adminReject($requestId, $adminUserId)) {
+            return ['success' => false, 'message' => 'Exchange request could not be rejected.'];
+        }
+
+        try {
+            if ($request && !empty($request['company_a_user_id'])) {
+                Notifier::send(
+                    (int) $request['company_a_user_id'],
+                    'Your exchange request for ' . (string) $request['employee_name'] . ' was not approved by the administrator.',
+                    'exchange',
+                    'employer/exchange-requests.php'
+                );
+            }
+        } catch (Throwable $exception) {
+            error_log('Notification failed: ' . $exception->getMessage());
+        }
+
+        return ['success' => true, 'message' => 'Exchange request rejected.'];
     }
 
     private function validateTerms(int $companyAId, ?float $offeredAmount, ?int $swapEmployeeId): array
